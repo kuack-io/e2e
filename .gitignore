@@ -1,0 +1,10 @@
+node_modules/
+dist/
+allure-results/
+allure-report/
+playwright-report/
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
