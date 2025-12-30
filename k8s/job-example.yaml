@@ -31,8 +31,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: HEADED
-          value: "false"
+        - name: HELM_CHART_VERSION
+          value: "1.0.0"  # Set the chart version for all tests
         - name: CUCUMBER_WORKERS
           value: "4"
         - name: SHARD_INDEX
