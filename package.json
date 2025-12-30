@@ -1,0 +1,55 @@
+{
+  "name": "e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests with Playwright, Cucumber, and Kubernetes integration",
+  "main": "index.js",
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "pretest": "npm run build",
+    "lint": "eslint .",
+    "lint-fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "test": "cucumber-js dist/features",
+    "test:headed": "HEADED=true cucumber-js dist/features",
+    "test:debug": "PWDEBUG=1 cucumber-js dist/features",
+    "test:parallel": "cucumber-js dist/features --parallel ${CUCUMBER_WORKERS:-4}",
+    "test:shard": "cucumber-js dist/features --tags '@shard-${SHARD_INDEX}'",
+    "report:allure": "npx allure generate allure-results --clean -o allure-report",
+    "report:serve": "npx allure serve allure-results",
+    "clean": "rm -rf dist node_modules/.cache allure-results allure-report playwright-report"
+  },
+  "keywords": [
+    "kuack",
+    "e2e",
+    "playwright",
+    "cucumber",
+    "bdd",
+    "kubernetes",
+    "testing"
+  ],
+  "author": "Kuack Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@cucumber/cucumber": "^12.5.0",
+    "@kubernetes/client-node": "1.4.0",
+    "@playwright/test": "^1.57.0",
+    "allure-cucumberjs": "^3.4.3",
+    "allure-js-commons": "^3.4.3",
+    "dotenv": "^17.2.3",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.9.3",
+    "@eslint/js": "^9.39.2",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
+    "eslint": "^9.39.2",
+    "prettier": "^3.2.5",
+    "prettier-plugin-tailwindcss": "^0.7.2"
+  }
+}

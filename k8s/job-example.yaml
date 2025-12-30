@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: e2e-tests-shard-0
+  namespace: e2e-tests
+  labels:
+    app: e2e-tests
+    shard: "0"
+spec:
+  # Set parallelism for this shard
+  parallelism: 4
+  completions: 4
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  template:
+    metadata:
+      labels:
+        app: e2e-tests
+        shard: "0"
+    spec:
+      serviceAccountName: e2e-test-runner
+      restartPolicy: Never
+      containers:
+      - name: test-runner
+        image: your-registry/e2e-tests:latest
+        imagePullPolicy: Always
+        env:
+        - name: BASE_URL
+          value: "http://frontend-service:3000"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: HEADED
+          value: "false"
+        - name: CUCUMBER_WORKERS
+          value: "4"
+        - name: SHARD_INDEX
+          value: "0"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: test-results
+          mountPath: /app/allure-results
+        - name: manifests
+          mountPath: /app/manifests
+          readOnly: true
+      volumes:
+      - name: test-results
+        emptyDir: {}
+      - name: manifests
+        configMap:
+          name: test-manifests
