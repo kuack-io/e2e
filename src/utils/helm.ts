@@ -20,19 +20,19 @@ export abstract class Helm extends Cmd {
     values?: string[];
   }): Promise<void> {
     const namespace = K8s.getNamespace();
-    const cmdParts = ["helm install", params.releaseName, params.chartRef, "--wait", "--namespace", namespace];
+    const args: string[] = ["helm", "install", params.releaseName, params.chartRef, "--wait", "--namespace", namespace];
     if (params.chartVersion !== "latest") {
-      cmdParts.push("--version", params.chartVersion);
+      args.push("--version", params.chartVersion);
     }
     if (params.values) {
       for (const value of params.values) {
-        cmdParts.push("--set", value);
+        args.push("--set", value);
       }
     }
-    const cmd = cmdParts.filter(Boolean).join(" ").trim();
-    console.log(`[Helm] Installing: ${cmd}`);
+    const printable = args.join(" ");
+    console.log(`[Helm] Installing: ${printable}`);
     try {
-      const result = await Cmd.runOrThrow(cmd);
+      const result = await Cmd.runOrThrow(args);
       if (result.stdout) {
         console.log(result.stdout);
       }
@@ -54,9 +54,10 @@ export abstract class Helm extends Cmd {
    */
   public static async delete(releaseName: string): Promise<void> {
     const namespace = K8s.getNamespace();
-    const cmd = `helm uninstall ${releaseName} --wait --namespace ${namespace}`;
-    console.log(`[Helm] Deleting: ${cmd}`);
-    const result = await Cmd.run(cmd);
+    const args = ["helm", "uninstall", releaseName, "--wait", "--namespace", namespace];
+    const printable = args.join(" ");
+    console.log(`[Helm] Deleting: ${printable}`);
+    const result = await Cmd.run(args);
     if (result.exitCode !== 0) {
       // Check if the error is "release: not found" - this is acceptable during cleanup
       if (result.stderr.includes("release: not found") || result.stderr.includes("not found")) {
@@ -64,7 +65,7 @@ export abstract class Helm extends Cmd {
         return;
       }
       // For other errors, throw
-      throw new Error(`Command failed (${result.exitCode}): ${cmd}\n${result.stderr || result.stdout}`);
+      throw new Error(`Command failed (${result.exitCode}): ${printable}\n${result.stderr || result.stdout}`);
     }
     if (result.stdout) {
       console.log(result.stdout);

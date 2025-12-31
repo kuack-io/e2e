@@ -1,6 +1,7 @@
 import { AppsV1Api, CoreV1Api, KubeConfig } from "@kubernetes/client-node";
 import { ChildProcess, spawn } from "child_process";
 import * as fs from "fs";
+import * as net from "net";
 
 /**
  * Configuration for port forwarding a Kubernetes service.
@@ -20,7 +21,7 @@ export abstract class K8s {
   private static namespace: string;
   private static kubeConfig: KubeConfig;
   private static inCluster: boolean;
-  private static portForwardProcesses: ChildProcess[] = [];
+  private static portForwards: Map<number, ChildProcess> = new Map();
 
   private static readonly inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace";
   /**
@@ -43,15 +44,14 @@ export abstract class K8s {
     K8s.core = kubeConfig.makeApiClient(CoreV1Api);
     K8s.apps = kubeConfig.makeApiClient(AppsV1Api);
     K8s.namespace = K8s.resolveNamespace();
-    console.log(`[Kubernetes] in cluster: ${inCluster}`);
-    console.log(`[Kubernetes] namespace: ${K8s.namespace}`);
+    console.log(`[Kubernetes] In cluster: ${inCluster}`);
+    console.log(`[Kubernetes] Namespace: ${K8s.namespace}`);
   }
 
   /**
    * Clean up resources including port forwards.
    */
   public static async destroy(): Promise<void> {
-    // Stop all port forwards
     await K8s.stopAllPortForwards();
   }
 
@@ -110,60 +110,109 @@ export abstract class K8s {
     const { serviceName, servicePort, localPort } = config;
     console.log(`[Kubernetes] Starting port-forward: localhost:${localPort} -> svc/${serviceName}:${servicePort}`);
 
+    // If we already have a port-forward on this local port (previous scenario),
+    // stop it first to avoid "address already in use" and leaked kubectl processes.
+    await K8s.stopPortForward(localPort);
+    await K8s.assertLocalPortFree(localPort);
+
+    // Use stdio: 'ignore' to avoid keeping Node.js event loop alive.
     const proc = spawn(
       "kubectl",
       ["port-forward", `svc/${serviceName}`, `${localPort}:${servicePort}`, "-n", K8s.namespace],
-      { stdio: "pipe" },
+      { stdio: "ignore", detached: true },
     );
 
-    K8s.portForwardProcesses.push(proc);
+    // Allow Node.js to exit even if process is still running
+    proc.unref();
 
-    // Wait for port-forward to be ready
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.log("[Kubernetes] Port-forward timeout, assuming ready");
-        resolve();
-      }, 5000);
+    K8s.portForwards.set(localPort, proc);
 
-      proc.stderr?.on("data", (data: Buffer) => {
-        const output = data.toString();
-        if (output.includes("Forwarding from")) {
-          clearTimeout(timeout);
-          console.log(`[Kubernetes] Port-forward ready: ${output.trim()}`);
-          resolve();
+    await K8s.waitForPortForwardReady(localPort, proc);
+  }
+
+  /**
+   * Stop a specific port forward by local port.
+   * @param localPort - The local port that was forwarded.
+   */
+  public static async stopPortForward(localPort: number): Promise<void> {
+    const proc = K8s.portForwards.get(localPort);
+    if (!proc) {
+      return;
+    }
+
+    try {
+      proc.removeAllListeners();
+      if (proc.pid && proc.exitCode === null) {
+        // Kill the process group (negative PID) since we used detached: true.
+        // This is best-effort and must not throw.
+        try {
+          process.kill(-proc.pid, "SIGKILL");
+        } catch {
+          // ignore
         }
-      });
-
-      proc.on("error", (error) => {
-        clearTimeout(timeout);
-        reject(new Error(`Failed to start port-forward: ${error.message}`));
-      });
-
-      proc.on("close", (code) => {
-        if (code !== 0 && code !== null) {
-          clearTimeout(timeout);
-          reject(new Error(`Port-forward exited with code ${code}`));
-        }
-      });
-    });
+      }
+    } finally {
+      K8s.portForwards.delete(localPort);
+    }
   }
 
   /**
    * Stop all active port forwards.
    */
   public static async stopAllPortForwards(): Promise<void> {
-    if (K8s.portForwardProcesses.length === 0) {
+    if (K8s.portForwards.size === 0) {
       return;
     }
 
-    console.log(`[Kubernetes] Stopping ${K8s.portForwardProcesses.length} port-forward(s)`);
-    for (const proc of K8s.portForwardProcesses) {
-      try {
-        proc.kill("SIGTERM");
-      } catch {
-        // Ignore errors during cleanup
+    console.log(`[Kubernetes] Stopping ${K8s.portForwards.size} port-forward(s)`);
+
+    const ports = Array.from(K8s.portForwards.keys());
+    await Promise.allSettled(ports.map((p) => K8s.stopPortForward(p)));
+  }
+
+  private static async assertLocalPortFree(localPort: number): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const server = net.createServer();
+      server.once("error", (err) => {
+        reject(new Error(`Local port ${localPort} is already in use: ${(err as Error).message}`));
+      });
+      server.listen(localPort, "127.0.0.1", () => {
+        server.close(() => resolve());
+      });
+    });
+  }
+
+  private static async waitForPortForwardReady(localPort: number, proc: ChildProcess): Promise<void> {
+    const deadlineMs = Date.now() + 15_000;
+    while (Date.now() < deadlineMs) {
+      if (proc.exitCode !== null) {
+        throw new Error(`Port-forward process exited with code ${proc.exitCode}`);
       }
+      const ok = await K8s.canConnect(localPort);
+      if (ok) {
+        console.log(`[Kubernetes] Port-forward ready on localhost:${localPort}`);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 150));
     }
-    K8s.portForwardProcesses = [];
+    throw new Error(`Port-forward did not become ready on localhost:${localPort} within timeout`);
+  }
+
+  private static async canConnect(port: number): Promise<boolean> {
+    return await new Promise<boolean>((resolve) => {
+      const socket = net.connect({ host: "127.0.0.1", port });
+      socket.setTimeout(500);
+      socket.once("connect", () => {
+        socket.end();
+        resolve(true);
+      });
+      socket.once("timeout", () => {
+        socket.destroy();
+        resolve(false);
+      });
+      socket.once("error", () => {
+        resolve(false);
+      });
+    });
   }
 }

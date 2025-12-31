@@ -1,4 +1,5 @@
 import { Helm } from "../utils/helm";
+import { K8s } from "../utils/k8s";
 import { Tools } from "../utils/tools";
 import { Config } from "./config";
 
@@ -10,6 +11,7 @@ export class Node {
   private readonly scenarioName: string;
   private readonly randomSuffix: string;
   private readonly releaseName: string;
+  private readonly localPort: number = 8081;
 
   constructor(featureName: string, scenarioName: string) {
     this.featureName = featureName;
@@ -25,6 +27,7 @@ export class Node {
     const values = [
       "agent.enabled=false",
       `fullnameOverride=${this.releaseName}`,
+      // NOTE: This must use an escaped dot so Helm treats "kuack.io/..." as one key segment.
       `global.labels.kuack\\.io/feature=${Tools.sanitize(this.featureName)}`,
       `global.labels.kuack\\.io/scenario=${Tools.sanitize(this.scenarioName)}`,
     ];
@@ -37,12 +40,23 @@ export class Node {
       chartVersion: Config.helmChartVersion,
       values: values,
     });
+    if (!K8s.isInCluster()) {
+      await K8s.startPortForward({
+        serviceName: this.releaseName,
+        servicePort: 8080,
+        localPort: this.localPort,
+      });
+    }
   }
 
   /**
    * Destroy the node by uninstalling the Helm release.
    */
   public async destroy(): Promise<void> {
+    if (!K8s.isInCluster()) {
+      console.log(`[Kubernetes] Stopping port-forward: localhost:${this.localPort} -> svc/${this.releaseName}:8080`);
+      await K8s.stopPortForward(this.localPort);
+    }
     await Helm.delete(this.releaseName);
   }
 }
