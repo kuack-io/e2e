@@ -12,7 +12,9 @@ import { Chromium } from "../../utils/browser";
 import { Given, When, Then } from "@cucumber/cucumber";
 
 Given("I open agent UI", async function (this: CustomWorld) {
+  console.log("Creating new browser instance");
   const browser = new Chromium();
+  console.log(`Opening agent UI at ${Agent.getURL()}`);
   await browser.open(Agent.getURL());
   this.addBrowser("main", browser);
 });

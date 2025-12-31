@@ -8,5 +8,6 @@ export class Config {
   static readonly agentVersion: string = process.env.AGENT_VERSION ?? "latest";
   static readonly nodeVersion: string = process.env.NODE_VERSION ?? "latest";
   static readonly helmChart: string = process.env.HELM_CHART ?? "oci://ghcr.io/kuack-io/charts/kuack";
+  static readonly playwrightDebug: boolean = process.env.PWDEBUG === "1" || process.env.PWDEBUG === "true";
   static readonly agentName: string = "kuack-agent";
 }
