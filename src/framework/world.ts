@@ -54,6 +54,11 @@ export class CustomWorld extends World {
    * Destroy the world by cleaning up resources (node, etc.).
    */
   public async destroy(): Promise<void> {
+    // Close any open Playwright browsers to avoid hanging the test runner.
+    const browsers = Array.from(this.browsers.values());
+    await Promise.allSettled(browsers.map((b) => b.close()));
+    this.browsers.clear();
+
     await this.node?.destroy();
   }
 

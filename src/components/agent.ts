@@ -7,16 +7,24 @@ import { Config } from "./config";
  * Agent component for managing the Kuack agent in tests.
  */
 export abstract class Agent {
+  private static agentName: string;
   private static agentURL: string;
+  private static readonly localPort: number = 8080;
 
   /**
    * Initialize the agent by installing it via Helm.
    */
   public static async init(): Promise<void> {
+    this.agentName = Config.agentName;
+    if (K8s.isInCluster()) {
+      this.agentURL = `http://${this.agentName}.${K8s.getNamespace()}.svc.cluster.local:8080/`;
+    } else {
+      this.agentURL = "http://localhost:8080/";
+    }
     const values = ["node.enabled=false"];
     if (Config.testId) {
-      // Double escape backslash: shell consumes one, Helm uses the other to escape the dot
-      values.push(`global.labels.kuack\\\\.io/test-id=${Tools.sanitize(Config.testId)}`);
+      // NOTE: This must use an escaped dot so Helm treats "kuack.io/..." as one key segment.
+      values.push(`global.labels.kuack\\.io/test-id=${Tools.sanitize(Config.testId)}`);
     }
     await Helm.install({
       releaseName: Config.agentName,
@@ -24,26 +32,30 @@ export abstract class Agent {
       chartVersion: Config.helmChartVersion,
       values,
     });
-    const namespace = K8s.getNamespace();
-    this.agentURL = `http://${Config.agentName}.${namespace}.svc.cluster.local:8080/`;
+    if (!K8s.isInCluster()) {
+      await K8s.startPortForward({
+        serviceName: this.agentName,
+        servicePort: 8080,
+        localPort: this.localPort,
+      });
+    }
   }
 
   /**
    * Destroy the agent by uninstalling the Helm release.
    */
   public static async destroy(): Promise<void> {
+    if (!K8s.isInCluster()) {
+      await K8s.stopPortForward(this.localPort);
+    }
     await Helm.delete(Config.agentName);
   }
 
   /**
    * Get the URL to access the agent UI.
-   * Returns localhost URL when running locally (port-forwarded), or in-cluster URL otherwise.
    * @returns The agent UI URL.
    */
   public static getURL(): string {
-    if (K8s.isInCluster()) {
-      return `http://${Config.agentName}.${K8s.getNamespace()}.svc.cluster.local:8080/`;
-    }
-    return "http://localhost:8080/"; // Port-forwarded
+    return this.agentURL;
   }
 }

@@ -14,19 +14,17 @@ export interface CmdResult {
  */
 export abstract class Cmd {
   /**
-   * Run a command and capture stdout/stderr. Uses `shell: true` so callers can pass a full command string.
-   * @param command - The shell command to execute.
-   * @param opts - Optional execution options.
-   * @param opts.cwd - Working directory for the command.
-   * @param opts.env - Environment variables to use.
+   * Run a command and capture stdout/stderr (no shell).
+   * First element of args array should be the binary name.
+   * @param args - Command and arguments (e.g., ["helm", "install", "my-release", ...]).
    * @returns The command result with stdout, stderr, and exit code.
    */
-  protected static run(command: string, opts?: { cwd?: string; env?: typeof process.env }): Promise<CmdResult> {
+  protected static async run(args: string[]): Promise<CmdResult> {
+    const [binary, ...cmdArgs] = args;
     return new Promise((resolve, reject) => {
-      const child = spawn(command, {
-        shell: true,
-        env: opts?.env ?? process.env,
-        cwd: opts?.cwd,
+      const child = spawn(binary, cmdArgs, {
+        shell: false,
+        env: process.env,
       });
 
       let stdout = "";
@@ -52,20 +50,16 @@ export abstract class Cmd {
 
   /**
    * Run a command and throw if exitCode != 0.
-   * @param command - The shell command to execute.
-   * @param opts - Optional execution options.
-   * @param opts.cwd - Working directory for the command.
-   * @param opts.env - Environment variables to use.
+   * First element of args array should be the binary name.
+   * @param args - Command and arguments (e.g., ["helm", "install", "my-release", ...]).
    * @returns The command result with stdout, stderr, and exit code.
    * @throws Error if the command exits with a non-zero code.
    */
-  protected static async runOrThrow(
-    command: string,
-    opts?: { cwd?: string; env?: typeof process.env },
-  ): Promise<CmdResult> {
-    const res = await Cmd.run(command, opts);
+  protected static async runOrThrow(args: string[]): Promise<CmdResult> {
+    const res = await Cmd.run(args);
     if (res.exitCode !== 0) {
-      throw new Error(`Command failed (${res.exitCode}): ${command}\n${res.stderr || res.stdout}`);
+      const printable = args.join(" ");
+      throw new Error(`Command failed (${res.exitCode}): ${printable}\n${res.stderr || res.stdout}`);
     }
     return res;
   }
