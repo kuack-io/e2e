@@ -5,10 +5,10 @@ Feature: Agent Connectivity
 
   Scenario: Agent can connect to Node
     Given I open agent UI
-    When I click connect button
+    When I connect agent to node
     Then Agent connects successfully
 
   Scenario: Node accepts connected agent
     Given I open agent UI
-    When I click connect button
+    When I connect agent to node
     Then Node accepts agent successfully

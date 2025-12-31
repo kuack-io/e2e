@@ -20,10 +20,15 @@ Given("I open agent UI", async function (this: CustomWorld) {
   this.addBrowser("main", browser);
 });
 
-When("I click connect button", async function (this: CustomWorld) {
-  console.log("Clicking connect button");
+When("I connect agent to node", async function (this: CustomWorld) {
   const browser = this.getBrowser("main");
   const page = browser.getPage();
+  const nodeURL = this.getNode().getURL();
+
+  console.log(`Setting server URL to: ${nodeURL}`);
+  await page.locator("#serverUrl").fill(nodeURL);
+
+  console.log("Clicking connect button");
   await page.locator("#connectBtn").click();
 });
 
