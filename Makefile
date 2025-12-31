@@ -16,9 +16,12 @@ format:
 	npm run format
 
 type-check:
-	npm run type-check || npm exec tsc --noEmit
+	npm run type-check
 
-check: format lint type-check test
+audit:
+	npm audit
+
+check: format lint type-check audit test
 
 test:
 	npm test
@@ -30,7 +33,6 @@ test-shard:
 	npm run test:shard
 
 report:
-	npm run report:allure
 	npm run report:serve
 
 clean:
@@ -39,18 +41,4 @@ clean:
 clear: clean
 
 docker-build:
-	docker build -t e2e-tests:latest .
-
-docker-push:
-	docker tag e2e-tests:latest my-local-registry/e2e-tests:latest
-	docker push my-local-registry/e2e-tests:latest
-
-k8s-apply:
-	kubectl apply -f k8s/namespace.yaml
-	kubectl apply -f k8s/serviceaccount.yaml
-	kubectl apply -f k8s/job-example.yaml
-
-k8s-delete:
-	kubectl delete -f k8s/job-example.yaml
-	kubectl delete -f k8s/serviceaccount.yaml
-	kubectl delete -f k8s/namespace.yaml
+	docker build -t e2e-tests .
