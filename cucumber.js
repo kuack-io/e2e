@@ -1,7 +1,7 @@
 // https://github.com/cucumber/cucumber-js/blob/main/docs/configuration.md
 module.exports = {
   default: {
-    paths: ['src/features/**/*.feature'],
+    paths: ['features/**/*.feature'],
     require: ['src/**/*.ts'],
     requireModule: ['tsx'],
     format: [
