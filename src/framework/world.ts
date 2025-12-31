@@ -92,6 +92,18 @@ export class CustomWorld extends World {
   public getBrowsers(): Map<string, BrowserInstance> {
     return this.browsers;
   }
+
+  /**
+   * Get the node instance.
+   * @returns The node instance.
+   * @throws Error if the node has not been initialized.
+   */
+  public getNode(): Node {
+    if (!this.node) {
+      throw new Error("Node has not been initialized");
+    }
+    return this.node;
+  }
 }
 
 setWorldConstructor(CustomWorld);
