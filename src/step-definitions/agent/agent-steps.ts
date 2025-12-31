@@ -6,11 +6,15 @@
  * 2. Helper functions (shared logic)
  * 3. Composite steps (high-level, business-focused)
  */
+import { Agent } from "../../components/agent";
 import { CustomWorld } from "../../framework";
+import { Chromium } from "../../utils/browser";
 import { Given, When, Then } from "@cucumber/cucumber";
 
 Given("I open agent UI", async function (this: CustomWorld) {
-  // TODO: Implement
+  const browser = new Chromium();
+  await browser.open(Agent.getURL());
+  this.addBrowser("main", browser);
 });
 
 When("I click connect button", async function (this: CustomWorld) {
