@@ -79,4 +79,13 @@ export class Node {
     }
     return this.nodeURL;
   }
+
+  /**
+   * Get the logs from the node pod.
+   * @returns The node pod logs as a string.
+   */
+  public async getLogs(): Promise<string> {
+    const labelSelector = `app.kubernetes.io/instance=${this.releaseName}`;
+    return K8s.getPodLogs(labelSelector);
+  }
 }

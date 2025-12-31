@@ -185,4 +185,34 @@ export abstract class K8s {
     }
     throw new Error(`Port-forward did not become ready on localhost:${localPort} within timeout`);
   }
+
+  /**
+   * Get logs from a pod by label selector.
+   * @param labelSelector - Label selector to find pods (e.g., "app.kubernetes.io/instance=kuack-node-xyz").
+   * @param container - Optional container name if pod has multiple containers.
+   * @returns The pod logs as a string.
+   */
+  public static async getPodLogs(labelSelector: string, container?: string): Promise<string> {
+    const pods = await K8s.core.listNamespacedPod({
+      namespace: K8s.namespace,
+      labelSelector,
+    });
+
+    if (pods.items.length === 0) {
+      throw new Error(`No pods found matching selector: ${labelSelector}`);
+    }
+
+    const podName = pods.items[0].metadata?.name;
+    if (!podName) {
+      throw new Error("Pod has no name");
+    }
+
+    const response = await K8s.core.readNamespacedPodLog({
+      name: podName,
+      namespace: K8s.namespace,
+      container,
+    });
+
+    return response;
+  }
 }

@@ -1,16 +1,8 @@
-/**
- * Example implementation showing best practices for managing BDD complexity
- *
- * This file demonstrates:
- * 1. Atomic steps (low-level, reusable)
- * 2. Helper functions (shared logic)
- * 3. Composite steps (high-level, business-focused)
- */
 import { Agent } from "../../components/agent";
+import { AgentPage } from "../../components/agentPage";
 import { CustomWorld } from "../../framework";
 import { Chromium } from "../../utils/browser";
 import { Given, When, Then } from "@cucumber/cucumber";
-import { expect } from "@playwright/test";
 
 Given("I open agent UI", async function (this: CustomWorld) {
   console.log("Creating new browser instance");
@@ -22,34 +14,26 @@ Given("I open agent UI", async function (this: CustomWorld) {
 
 When("I connect agent to node", async function (this: CustomWorld) {
   const browser = this.getBrowser("main");
-  const page = browser.getPage();
+  const agentPage = new AgentPage(browser);
   const nodeURL = this.getNode().getURL();
 
   console.log(`Setting server URL to: ${nodeURL}`);
-  await page.locator("#serverUrl").fill(nodeURL);
+  await agentPage.setServerURL(nodeURL);
 
   console.log("Clicking connect button");
-  await page.locator("#connectBtn").click();
+  await agentPage.connect();
 });
 
 Then("Agent connects successfully", async function (this: CustomWorld) {
   console.log("Verifying agent connection success");
   const browser = this.getBrowser("main");
-  const page = browser.getPage();
+  const agentPage = new AgentPage(browser);
 
   // Check that status is "connected"
-  const statusElement = page.locator("#status");
-  await expect(statusElement).toHaveClass(/connected/);
-  await expect(statusElement).toContainText("Status: Connected");
+  await agentPage.expectConnected();
   console.log("Status confirmed as connected");
 
   // Check that execution logs contain the successful connection message
-  const logsElement = page.locator("#logs");
-  await expect(logsElement).toContainText("[Agent] WebSocket connection established");
+  await agentPage.expectLogsContain("[Agent] WebSocket connection established");
   console.log("Execution logs confirmed successful connection message");
-});
-
-Then("Node accepts agent successfully", async function (this: CustomWorld) {
-  // TODO: Implement
-  console.log("Verifying node accepts agent successfully");
 });
