@@ -16,18 +16,13 @@ export class Node {
   }
 
   public async init(): Promise<void> {
-    console.log("[Node] Installing", this.releaseName);
-    const values = [
-      "agent.enabled=false",
-      `fullnameOverride=${this.releaseName}`
-    ];
+    const values = ["agent.enabled=false", `fullnameOverride=${this.releaseName}`];
     await Helm.install({
       releaseName: this.releaseName,
       chartRef: Config.helmChart,
       chartVersion: Config.helmChartVersion,
       values: values,
     });
-    console.log("[Node] Installed", this.releaseName);
   }
 
   public async destroy(): Promise<void> {

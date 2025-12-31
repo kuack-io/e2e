@@ -39,7 +39,6 @@ Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario:
   const logs = new Logs();
   logs.start();
   try {
-    console.log("[Before] Initializing test", featureName, "->", scenarioName);
     await this.init(featureName, scenarioName);
   } finally {
     const captured = logs.stop();
@@ -53,7 +52,6 @@ After({ name: "Tear down test" }, async function (this: CustomWorld) {
   const logs = new Logs();
   logs.start();
   try {
-    console.log("[After] Tearing down test");
     await this.destroy();
   } finally {
     const captured = logs.stop();
@@ -69,8 +67,8 @@ BeforeStep(async function (this: CustomWorld) {
 });
 
 AfterStep(async function (this: CustomWorld) {
-    const captured = this.stepLogs?.stop() ?? [];
-    if (captured.length > 0) {
-      this.attach(captured.join("\n"), "text/plain");
-    }
+  const captured = this.stepLogs?.stop() ?? [];
+  if (captured.length > 0) {
+    this.attach(captured.join("\n"), "text/plain");
+  }
 });

@@ -29,6 +29,8 @@ export abstract class K8s {
     K8s.core = kubeConfig.makeApiClient(CoreV1Api);
     K8s.apps = kubeConfig.makeApiClient(AppsV1Api);
     K8s.namespace = K8s.resolveNamespace();
+    console.log(`[Kubernetes] in cluster: ${isInCluster}`);
+    console.log(`[Kubernetes] namespace: ${K8s.namespace}`);
   }
 
   /**

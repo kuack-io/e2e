@@ -3,7 +3,7 @@ import { Config } from "./config";
 
 export abstract class Agent {
   public static async init(): Promise<void> {
-    const values = ["node.enabled=false"]
+    const values = ["node.enabled=false"];
     await Helm.install({
       releaseName: Config.agentName,
       chartRef: Config.helmChart,

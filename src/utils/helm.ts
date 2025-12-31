@@ -2,7 +2,12 @@ import { Cmd } from "./cmd";
 import { K8s } from "./k8s";
 
 export class Helm extends Cmd {
-  public static async install(params: { releaseName: string; chartRef: string; chartVersion: string; values?: string[]; }): Promise<void> {
+  public static async install(params: {
+    releaseName: string;
+    chartRef: string;
+    chartVersion: string;
+    values?: string[];
+  }): Promise<void> {
     const namespace = K8s.getNamespace();
     const cmdParts = ["helm install", params.releaseName, params.chartRef, "--wait", "--namespace", namespace];
     if (params.chartVersion !== "latest") {
@@ -18,10 +23,10 @@ export class Helm extends Cmd {
     try {
       const result = await Cmd.runOrThrow(cmd);
       if (result.stdout) {
-        console.log(`[Helm] stdout: ${result.stdout}`);
+        console.log(result.stdout);
       }
       if (result.stderr) {
-        console.log(`[Helm] stderr: ${result.stderr}`);
+        console.log(result.stderr);
       }
     } catch (error) {
       // Log the full error details before rethrowing
@@ -47,10 +52,10 @@ export class Helm extends Cmd {
       throw new Error(`Command failed (${result.exitCode}): ${cmd}\n${result.stderr || result.stdout}`);
     }
     if (result.stdout) {
-      console.log(`[Helm] stdout: ${result.stdout}`);
+      console.log(result.stdout);
     }
     if (result.stderr) {
-      console.log(`[Helm] stderr: ${result.stderr}`);
+      console.log(result.stderr);
     }
   }
 }
