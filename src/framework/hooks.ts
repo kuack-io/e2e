@@ -11,7 +11,6 @@ import {
   AfterStep,
   ITestCaseHookParameter,
   ITestStepHookParameter,
-  Status,
   setDefaultTimeout,
 } from "@cucumber/cucumber";
 import * as fs from "node:fs";
@@ -100,7 +99,7 @@ BeforeStep(async function (this: CustomWorld) {
   this.startCaptureLogs();
 });
 
-AfterStep(async function (this: CustomWorld, { result }: ITestStepHookParameter) {
+AfterStep(async function (this: CustomWorld, { result: _result }: ITestStepHookParameter) {
   const captured = this.stopCaptureLogs() ?? [];
   if (captured.length > 0) {
     this.attach(captured.join("\n"), { mediaType: "text/plain", fileName: "console.log" });
