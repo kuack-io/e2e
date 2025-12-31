@@ -11,6 +11,7 @@ export interface BrowserInstance {
   close(): Promise<void>;
   screenshot(): Promise<Buffer | undefined>;
   getVideoPath(): Promise<string | undefined>;
+  getPage(): Page;
 }
 
 /**
@@ -25,6 +26,7 @@ export class Chromium implements BrowserInstance {
   /**
    * Get the directory path for storing videos.
    * Videos are stored in allure-results/playwright-videos directory.
+   * @returns The directory path for storing videos.
    */
   private static getVideoDir(): string {
     const videoDir = path.join(process.cwd(), "allure-results", "playwright-videos");
@@ -53,6 +55,19 @@ export class Chromium implements BrowserInstance {
     });
     this.page = await this.context.newPage();
     await this.page.goto(url, { waitUntil: "networkidle" });
+  }
+
+  /**
+   * Get the Playwright page instance for direct interaction.
+   * @returns The page instance.
+   * @throws Error if the page is not available (browser not opened yet).
+   */
+  public getPage(): Page {
+    const page = this.page;
+    if (!page) {
+      throw new Error("Page is not available. Call open() first.");
+    }
+    return page;
   }
 
   /**
