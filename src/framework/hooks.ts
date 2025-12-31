@@ -29,12 +29,8 @@ AfterAll(async function () {
 });
 
 Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario: ITestCaseHookParameter) {
-  const featureName = scenario.gherkinDocument?.feature?.name ?? "";
   const scenarioName = scenario.pickle.name;
-
-  if (!featureName) {
-    throw new Error("Feature name must be defined");
-  }
+  const featureName = scenario.gherkinDocument?.feature?.name ?? "";
 
   const logs = new Logs();
   logs.start();
