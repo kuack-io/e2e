@@ -1,5 +1,6 @@
 import { Helm } from "../utils/helm";
 import { K8s } from "../utils/k8s";
+import { Network } from "../utils/network";
 import { Tools } from "../utils/tools";
 import { Config } from "./config";
 
@@ -11,7 +12,8 @@ export class Node {
   private readonly scenarioName: string;
   private readonly randomSuffix: string;
   private readonly releaseName: string;
-  private readonly localPort: number = 8081;
+  private localPort?: number;
+  private nodeURL?: string;
 
   constructor(featureName: string, scenarioName: string) {
     this.featureName = featureName;
@@ -40,12 +42,18 @@ export class Node {
       chartVersion: Config.helmChartVersion,
       values: values,
     });
-    if (!K8s.isInCluster()) {
+    if (K8s.isInCluster()) {
+      // In-cluster: use the service DNS name directly
+      this.nodeURL = `http://${this.releaseName}.${K8s.getNamespace()}.svc.cluster.local:8080/`;
+    } else {
+      // Local development: find a free port and set up port forwarding
+      this.localPort = await Network.findFreePort();
       await K8s.startPortForward({
         serviceName: this.releaseName,
         servicePort: 8080,
         localPort: this.localPort,
       });
+      this.nodeURL = `http://localhost:${this.localPort}/`;
     }
   }
 
@@ -53,10 +61,22 @@ export class Node {
    * Destroy the node by uninstalling the Helm release.
    */
   public async destroy(): Promise<void> {
-    if (!K8s.isInCluster()) {
+    if (!K8s.isInCluster() && this.localPort !== undefined) {
       console.log(`[Kubernetes] Stopping port-forward: localhost:${this.localPort} -> svc/${this.releaseName}:8080`);
       await K8s.stopPortForward(this.localPort);
     }
     await Helm.delete(this.releaseName);
+  }
+
+  /**
+   * Get the URL to access the node.
+   * @returns The node URL.
+   * @throws Error if the node has not been initialized.
+   */
+  public getURL(): string {
+    if (!this.nodeURL) {
+      throw new Error("Node has not been initialized");
+    }
+    return this.nodeURL;
   }
 }

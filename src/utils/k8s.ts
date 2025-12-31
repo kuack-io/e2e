@@ -1,7 +1,7 @@
+import { Network } from "./network";
 import { AppsV1Api, CoreV1Api, KubeConfig } from "@kubernetes/client-node";
 import { ChildProcess, spawn } from "child_process";
 import * as fs from "fs";
-import * as net from "net";
 
 /**
  * Configuration for port forwarding a Kubernetes service.
@@ -113,7 +113,7 @@ export abstract class K8s {
     // If we already have a port-forward on this local port (previous scenario),
     // stop it first to avoid "address already in use" and leaked kubectl processes.
     await K8s.stopPortForward(localPort);
-    await K8s.assertLocalPortFree(localPort);
+    await Network.assertLocalPortFree(localPort);
 
     // Use stdio: 'ignore' to avoid keeping Node.js event loop alive.
     const proc = spawn(
@@ -170,25 +170,13 @@ export abstract class K8s {
     await Promise.allSettled(ports.map((p) => K8s.stopPortForward(p)));
   }
 
-  private static async assertLocalPortFree(localPort: number): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      const server = net.createServer();
-      server.once("error", (err) => {
-        reject(new Error(`Local port ${localPort} is already in use: ${(err as Error).message}`));
-      });
-      server.listen(localPort, "127.0.0.1", () => {
-        server.close(() => resolve());
-      });
-    });
-  }
-
   private static async waitForPortForwardReady(localPort: number, proc: ChildProcess): Promise<void> {
     const deadlineMs = Date.now() + 15_000;
     while (Date.now() < deadlineMs) {
       if (proc.exitCode !== null) {
         throw new Error(`Port-forward process exited with code ${proc.exitCode}`);
       }
-      const ok = await K8s.canConnect(localPort);
+      const ok = await Network.canConnect(localPort);
       if (ok) {
         console.log(`[Kubernetes] Port-forward ready on localhost:${localPort}`);
         return;
@@ -196,23 +184,5 @@ export abstract class K8s {
       await new Promise((r) => setTimeout(r, 150));
     }
     throw new Error(`Port-forward did not become ready on localhost:${localPort} within timeout`);
-  }
-
-  private static async canConnect(port: number): Promise<boolean> {
-    return await new Promise<boolean>((resolve) => {
-      const socket = net.connect({ host: "127.0.0.1", port });
-      socket.setTimeout(500);
-      socket.once("connect", () => {
-        socket.end();
-        resolve(true);
-      });
-      socket.once("timeout", () => {
-        socket.destroy();
-        resolve(false);
-      });
-      socket.once("error", () => {
-        resolve(false);
-      });
-    });
   }
 }

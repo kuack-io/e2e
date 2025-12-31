@@ -84,6 +84,14 @@ export class CustomWorld extends World {
     }
     return browser;
   }
+
+  /**
+   * Get all registered browser instances with their names.
+   * @returns A map of browser names to browser instances.
+   */
+  public getBrowsers(): Map<string, BrowserInstance> {
+    return this.browsers;
+  }
 }
 
 setWorldConstructor(CustomWorld);
