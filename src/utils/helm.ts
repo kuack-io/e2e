@@ -1,7 +1,18 @@
 import { Cmd } from "./cmd";
 import { K8s } from "./k8s";
 
-export class Helm extends Cmd {
+/**
+ * Helm utility class for managing Helm chart installations.
+ */
+export abstract class Helm extends Cmd {
+  /**
+   * Install a Helm chart.
+   * @param params - Installation parameters.
+   * @param params.releaseName - The name for the Helm release.
+   * @param params.chartRef - The chart reference (e.g., oci://... or repo/chart).
+   * @param params.chartVersion - The chart version to install.
+   * @param params.values - Optional array of --set values.
+   */
   public static async install(params: {
     releaseName: string;
     chartRef: string;
@@ -37,6 +48,10 @@ export class Helm extends Cmd {
     }
   }
 
+  /**
+   * Delete a Helm release.
+   * @param releaseName - The name of the release to delete.
+   */
   public static async delete(releaseName: string): Promise<void> {
     const namespace = K8s.getNamespace();
     const cmd = `helm uninstall ${releaseName} --wait --namespace ${namespace}`;

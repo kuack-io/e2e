@@ -26,6 +26,8 @@ BeforeAll(async function () {
 AfterAll(async function () {
   console.log("[AfterAll] Destroying Agent");
   await Agent.destroy();
+  console.log("[AfterAll] Destroying K8s");
+  await K8s.destroy();
 });
 
 Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario: ITestCaseHookParameter) {
@@ -58,12 +60,12 @@ After({ name: "Tear down test" }, async function (this: CustomWorld) {
 });
 
 BeforeStep(async function (this: CustomWorld) {
-  this.stepLogs = new Logs();
-  this.stepLogs.start();
+  this.initLogs();
+  this.startCaptureLogs();
 });
 
 AfterStep(async function (this: CustomWorld) {
-  const captured = this.stepLogs?.stop() ?? [];
+  const captured = this.stopCaptureLogs() ?? [];
   if (captured.length > 0) {
     this.attach(captured.join("\n"), "text/plain");
   }

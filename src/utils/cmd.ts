@@ -1,14 +1,25 @@
 import { spawn } from "child_process";
 
+/**
+ * Result of executing a shell command.
+ */
 export interface CmdResult {
   stdout: string;
   stderr: string;
   exitCode: number | null;
 }
 
+/**
+ * Base class for executing shell commands.
+ */
 export abstract class Cmd {
   /**
    * Run a command and capture stdout/stderr. Uses `shell: true` so callers can pass a full command string.
+   * @param command - The shell command to execute.
+   * @param opts - Optional execution options.
+   * @param opts.cwd - Working directory for the command.
+   * @param opts.env - Environment variables to use.
+   * @returns The command result with stdout, stderr, and exit code.
    */
   protected static run(command: string, opts?: { cwd?: string; env?: typeof process.env }): Promise<CmdResult> {
     return new Promise((resolve, reject) => {
@@ -41,6 +52,12 @@ export abstract class Cmd {
 
   /**
    * Run a command and throw if exitCode != 0.
+   * @param command - The shell command to execute.
+   * @param opts - Optional execution options.
+   * @param opts.cwd - Working directory for the command.
+   * @param opts.env - Environment variables to use.
+   * @returns The command result with stdout, stderr, and exit code.
+   * @throws Error if the command exits with a non-zero code.
    */
   protected static async runOrThrow(
     command: string,

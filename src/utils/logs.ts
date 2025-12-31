@@ -60,6 +60,7 @@ export class Logs {
 
   /**
    * Stop capturing and return collected logs.
+   * @returns An array of captured log messages.
    */
   public stop(): string[] {
     if (Logs.currentCapture === this) {
