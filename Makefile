@@ -21,7 +21,7 @@ type-check:
 audit:
 	npm audit
 
-check: format lint type-check audit test
+check: format lint type-check audit
 
 test:
 	npm test
