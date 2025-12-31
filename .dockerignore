@@ -4,6 +4,6 @@
 !tsconfig.json
 !src/
 !manifests/
-!.cucumberrc.js
+!cucumber.js
 !playwright.config.ts
 !eslint.config.js

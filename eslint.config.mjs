@@ -3,6 +3,9 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 
 export default [
+  {
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'cucumber.js'],
+  },
   js.configs.recommended,
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -31,16 +34,5 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
-  },
-  {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
-    languageOptions: {
-      globals: {
-        global: 'writable',
-      },
-    },
-  },
-  {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'setupTests.ts', 'vitest.config.ts'],
   },
 ];

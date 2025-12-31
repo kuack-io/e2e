@@ -1,5 +1,5 @@
 import { Helm } from "../utils/helm";
-import { Tools } from "../utils/random";
+import { Tools } from "../utils/tools";
 import { Config } from "./config";
 
 export class Node {
@@ -13,15 +13,24 @@ export class Node {
     this.scenarioName = scenarioName;
     this.randomSuffix = Tools.randomString(10);
     this.releaseName = `kuack-node-${this.randomSuffix}`;
+  }
 
-    Helm.install({
+  public async init(): Promise<void> {
+    console.log("[Node] Installing", this.releaseName);
+    const values = [
+      "agent.enabled=false",
+      `fullnameOverride=${this.releaseName}`
+    ];
+    await Helm.install({
       releaseName: this.releaseName,
       chartRef: Config.helmChart,
       chartVersion: Config.helmChartVersion,
+      values: values,
     });
+    console.log("[Node] Installed", this.releaseName);
   }
 
   public async destroy(): Promise<void> {
-    Helm.delete(this.releaseName);
+    await Helm.delete(this.releaseName);
   }
 }

@@ -10,7 +10,7 @@ export abstract class Cmd {
   /**
    * Run a command and capture stdout/stderr. Uses `shell: true` so callers can pass a full command string.
    */
-  protected static run(command: string, opts?: { cwd?: string; env?: NodeJS.ProcessEnv }): Promise<CmdResult> {
+  protected static run(command: string, opts?: { cwd?: string; env?: typeof process.env }): Promise<CmdResult> {
     return new Promise((resolve, reject) => {
       const child = spawn(command, {
         shell: true,
@@ -44,7 +44,7 @@ export abstract class Cmd {
    */
   protected static async runOrThrow(
     command: string,
-    opts?: { cwd?: string; env?: NodeJS.ProcessEnv },
+    opts?: { cwd?: string; env?: typeof process.env },
   ): Promise<CmdResult> {
     const res = await Cmd.run(command, opts);
     if (res.exitCode !== 0) {
