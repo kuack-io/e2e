@@ -29,9 +29,6 @@ test:
 test-parallel:
 	npm run test:parallel
 
-test-shard:
-	npm run test:shard
-
 report:
 	npm run report:serve
 

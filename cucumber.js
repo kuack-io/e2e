@@ -7,6 +7,7 @@ module.exports = {
     format: [
       'progress-bar',
       'summary',
+      '@cucumber/pretty-formatter',
       'allure-cucumberjs/reporter',
       'html:allure-results/cucumber-report.html',
     ],
