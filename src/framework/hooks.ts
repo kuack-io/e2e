@@ -15,20 +15,61 @@ import {
 } from "@cucumber/cucumber";
 import * as fs from "node:fs";
 
-setDefaultTimeout(60_000);
+// Timeout for test steps (2 minutes to account for helm install --wait)
+const STEP_TIMEOUT_MS = 120_000;
+// Internal timeout fires slightly before Cucumber's to allow error capture
+const INIT_TIMEOUT_MS = STEP_TIMEOUT_MS - 2_000;
+
+setDefaultTimeout(STEP_TIMEOUT_MS);
+
+/**
+ * Run an async function with a timeout.
+ * Throws a TimeoutError if the function doesn't complete in time.
+ */
+async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Timeout: ${label} did not complete within ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([fn(), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
+}
+
+// Module-level agent instance for this worker.
+// Each parallel worker has its own process and thus its own agent.
+let workerAgent: Agent;
+
+/**
+ * Get the agent instance for this worker.
+ * @returns The agent instance.
+ * @throws Error if the agent has not been initialized.
+ */
+export function getAgent(): Agent {
+  if (!workerAgent) {
+    throw new Error("Agent has not been initialized");
+  }
+  return workerAgent;
+}
 
 BeforeAll(async function () {
   Logs.init();
   console.log("[BeforeAll] Initializing K8s");
   await K8s.init();
   console.log("[BeforeAll] Initializing Agent");
-  await Agent.init();
+  workerAgent = new Agent();
+  await workerAgent.init();
 });
 
 AfterAll(async function () {
   console.log("[AfterAll] Destroying Agent");
-  await Agent.destroy();
-  console.log("[AfterAll] Destroying K8s");
+  await workerAgent.destroy();
+  console.log("[AfterAll] Deinitializing K8s");
   await K8s.destroy();
 });
 
@@ -38,12 +79,29 @@ Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario:
 
   const logs = new Logs();
   logs.start();
+  let initError: unknown = null;
   try {
-    await this.init(featureName, scenarioName);
+    await withTimeout(
+      () => this.init(featureName, scenarioName),
+      INIT_TIMEOUT_MS,
+      `Initialize scenario "${scenarioName}"`,
+    );
+  } catch (error) {
+    initError = error;
+    console.error(`[Before] Failed to initialize scenario "${scenarioName}":`, error);
   } finally {
     const captured = logs.stop();
+    // Attach captured logs
     if (captured.length > 0) {
       this.attach(captured.join("\n"), { mediaType: "text/plain", fileName: "console.log" });
+    }
+    // If there was an error, attach it separately to ensure it's visible in the report
+    if (initError) {
+      const errorMessage = initError instanceof Error
+        ? `${initError.message}\n\nStack trace:\n${initError.stack}`
+        : String(initError);
+      this.attach(errorMessage, { mediaType: "text/plain", fileName: "error.txt" });
+      throw initError;
     }
   }
 });
