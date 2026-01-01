@@ -1,6 +1,8 @@
+import { Agent } from "../components/agent";
 import { Node } from "../components/node";
 import { BrowserInstance } from "../utils/browser";
 import { Logs } from "../utils/logs";
+import { getAgent } from "./hooks";
 import { World, setWorldConstructor } from "@cucumber/cucumber";
 
 /**
@@ -103,6 +105,14 @@ export class CustomWorld extends World {
       throw new Error("Node has not been initialized");
     }
     return this.node;
+  }
+
+  /**
+   * Get the agent instance for this worker.
+   * @returns The agent instance.
+   */
+  public getAgent(): Agent {
+    return getAgent();
   }
 }
 
