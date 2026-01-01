@@ -23,10 +23,7 @@ export class Agent {
    * Initialize the agent by installing it via Helm.
    */
   public async init(): Promise<void> {
-    const values = [
-      "node.enabled=false",
-      `fullnameOverride=${this.releaseName}`,
-    ];
+    const values = ["node.enabled=false", `fullnameOverride=${this.releaseName}`];
     if (Config.testId) {
       // NOTE: This must use an escaped dot so Helm treats "kuack.io/..." as one key segment.
       values.push(`global.labels.kuack\\.io/test-id=${Tools.sanitize(Config.testId)}`);

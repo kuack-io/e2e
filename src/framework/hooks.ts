@@ -25,9 +25,13 @@ setDefaultTimeout(STEP_TIMEOUT_MS);
 /**
  * Run an async function with a timeout.
  * Throws a TimeoutError if the function doesn't complete in time.
+ * @param fn - The async function to run.
+ * @param timeoutMs - The timeout in milliseconds.
+ * @param label - A label for the timeout error message.
+ * @returns The result of the async function.
  */
 async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number, label: string): Promise<T> {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(`Timeout: ${label} did not complete within ${timeoutMs / 1000}s`));
@@ -37,7 +41,9 @@ async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number, label: st
   try {
     return await Promise.race([fn(), timeoutPromise]);
   } finally {
-    clearTimeout(timeoutId!);
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
@@ -95,14 +101,14 @@ Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario:
     if (captured.length > 0) {
       this.attach(captured.join("\n"), { mediaType: "text/plain", fileName: "console.log" });
     }
-    // If there was an error, attach it separately to ensure it's visible in the report
-    if (initError) {
-      const errorMessage = initError instanceof Error
-        ? `${initError.message}\n\nStack trace:\n${initError.stack}`
-        : String(initError);
-      this.attach(errorMessage, { mediaType: "text/plain", fileName: "error.txt" });
-      throw initError;
-    }
+  }
+  // If there was an error, attach it separately to ensure it's visible in the report
+  // This is done outside finally to avoid unsafe throw in finally block
+  if (initError) {
+    const errorMessage =
+      initError instanceof Error ? `${initError.message}\n\nStack trace:\n${initError.stack}` : String(initError);
+    this.attach(errorMessage, { mediaType: "text/plain", fileName: "error.txt" });
+    throw initError;
   }
 });
 

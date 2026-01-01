@@ -10,10 +10,11 @@ RUN apt-get update && \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/ && \
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     npm ci && \
     npm run build && \
     rm -rf src
 
-CMD ["npm", "test"]
+CMD ["npm", "run","test:parallel"]
