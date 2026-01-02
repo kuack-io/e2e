@@ -27,7 +27,7 @@ cleanup_existing_job() {
 
 cleanup_artifacts() {
     echo "Cleaning up previous artifacts..."
-    minikube ssh "rm -rf /tmp/e2e-allure-report" 2>/dev/null || true
+    minikube ssh "rm -rf /tmp/e2e-allure-results" 2>/dev/null || true
 }
 
 apply_manifest() {
@@ -68,18 +68,24 @@ check_job_status() {
     fi
 }
 
-download_allure_artifacts() {
+download_allure_results() {
     echo ""
-    echo "Downloading Allure report from minikube node..."
+    echo "Downloading Allure results from minikube node..."
 
-    rm -rf ./allure-report
-    mkdir -p ./allure-report
+    rm -rf ./allure-results
+    mkdir -p ./allure-results
 
-    minikube ssh "cd /tmp/e2e-allure-report && tar cf /tmp/allure-report.tar ."
-    minikube cp minikube:/tmp/allure-report.tar ./allure-report.tar
-    tar xf ./allure-report.tar -C ./allure-report
-    rm -f ./allure-report.tar
-    minikube ssh "rm -f /tmp/allure-report.tar"
+    minikube ssh "cd /tmp/e2e-allure-results && tar cf /tmp/allure-results.tar ."
+    minikube cp minikube:/tmp/allure-results.tar ./allure-results.tar
+    tar xf ./allure-results.tar -C ./allure-results
+    rm -f ./allure-results.tar
+    minikube ssh "rm -f /tmp/allure-results.tar"
+}
+
+generate_allure_report() {
+    echo ""
+    echo "Generating Allure report..."
+    npm run report:generate
 }
 
 open_allure_report() {
@@ -109,7 +115,8 @@ main() {
     wait_for_job
     get_logs
     check_job_status
-    download_allure_artifacts
+    download_allure_results
+    generate_allure_report
     open_allure_report
 }
 

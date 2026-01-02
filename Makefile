@@ -33,7 +33,8 @@ test-minikube:
 	./scripts/test-in-minikube.sh
 
 report:
-	npm run report:serve
+	npm run report:generate
+	xdg-open ./allure-report/index.html
 
 clean:
 	npm run clean

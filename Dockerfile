@@ -27,9 +27,8 @@ RUN apt-get update && \
 COPY package.json ./
 COPY features/ ./features/
 COPY cucumber.js ./
-COPY --chmod=755 docker-entrypoint.sh ./entrypoint.sh
 
 COPY --from=builder /build/node_modules ./node_modules
 COPY --from=builder /build/dist ./dist
 
-ENTRYPOINT ["/e2e/entrypoint.sh"]
+CMD ["npm", "run", "test:parallel"]
