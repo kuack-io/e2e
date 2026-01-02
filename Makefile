@@ -1,4 +1,4 @@
-.PHONY: install build lint lint-fix format type-check check test test-parallel test-shard report clean clear docker-build docker-push k8s-apply k8s-delete
+.PHONY: install build lint lint-fix format type-check check test-local test-local-parallel test-minikube report clean clear docker-build docker-build-minikube
 
 install:
 	npm install
@@ -23,11 +23,14 @@ audit:
 
 check: format lint type-check audit
 
-test:
+test-local: build
 	npm test
 
-test-parallel:
+test-local-parallel: build
 	npm run test:parallel
+
+test-minikube:
+	./scripts/test-in-minikube.sh
 
 report:
 	npm run report:serve
@@ -39,3 +42,6 @@ clear: clean
 
 docker-build:
 	docker build -t e2e-tests .
+
+docker-build-minikube:
+	eval $$(minikube docker-env) && docker build -t e2e-tests .

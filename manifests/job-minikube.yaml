@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: e2e-tests
+spec:
+  # Prevent the job from running multiple times
+  backoffLimit: 0
+  # Clean up completed jobs after 1 hour
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: e2e-tests
+    spec:
+      serviceAccountName: e2e-tests
+      restartPolicy: Never
+      containers:
+        - name: e2e-tests
+          image: e2e-tests
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TEST_ID
+              value: "local"
+            - name: CUCUMBER_WORKERS
+              value: "2"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: artifacts
+              mountPath: /e2e/allure-report
+      volumes:
+        - name: artifacts
+          hostPath:
+            path: /tmp/e2e-allure-report
+            type: DirectoryOrCreate

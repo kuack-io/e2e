@@ -12,8 +12,7 @@
     "test": "rm -rf allure-results && cucumber-js",
     "test:debug": "PWDEBUG=1 cucumber-js",
     "test:parallel": "cucumber-js --parallel ${CUCUMBER_WORKERS:-4}",
-    "report:generate": "npx allure generate allure-results --output allure-report --clean",
-    "report:open": "npx allure open allure-report",
+    "report:generate": "rm -rf allure-report/* && npx allure generate --output allure-report allure-results",
     "report:serve": "npx allure serve allure-results",
     "clean": "rm -rf dist node_modules/.cache allure-results allure-report"
   },
@@ -31,6 +30,7 @@
     "@cucumber/pretty-formatter": "^2.4.1",
     "@kubernetes/client-node": "1.4.0",
     "@playwright/test": "^1.57.0",
+    "allure-commandline": "^2.36.0",
     "allure-cucumberjs": "^3.4.3",
     "allure-js-commons": "^3.4.3"
   },

@@ -1,9 +1,19 @@
-# Multi-stage build for e2e test image
+FROM public.ecr.aws/docker/library/node:24-slim AS builder
+
+WORKDIR /build
+
+COPY package.json package-lock.json tsconfig.json ./
+COPY src/ ./src/
+
+# Install TypeScript globally (build tool, not a project dependency).
+# Then install only production deps and build.
+RUN npm install -g typescript && \
+    npm ci --omit=dev && \
+    tsc
+
 FROM mcr.microsoft.com/playwright:v1.57.0-noble
 
-WORKDIR /app
-
-COPY . .
+WORKDIR /e2e
 
 RUN apt-get update && \
     apt-get install -y curl && \
@@ -12,9 +22,14 @@ RUN apt-get update && \
     mv kubectl /usr/local/bin/ && \
     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm ci && \
-    npm run build && \
-    rm -rf src
+    rm -rf /var/lib/apt/lists/*
 
-CMD ["npm", "run","test:parallel"]
+COPY package.json ./
+COPY features/ ./features/
+COPY cucumber.js ./
+COPY --chmod=755 docker-entrypoint.sh ./entrypoint.sh
+
+COPY --from=builder /build/node_modules ./node_modules
+COPY --from=builder /build/dist ./dist
+
+ENTRYPOINT ["/e2e/entrypoint.sh"]
