@@ -29,7 +29,7 @@ test-cleanup:
 test-local: test-cleanup build
 	npm test
 
-test-local-parallel: test-cleanupbuild
+test-local-parallel: test-cleanup build
 	npm run test:parallel
 
 test-minikube: test-cleanup

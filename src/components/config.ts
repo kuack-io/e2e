@@ -10,4 +10,18 @@ export class Config {
   static readonly helmChart: string = process.env.HELM_CHART ?? "oci://ghcr.io/kuack-io/charts/kuack";
   static readonly playwrightDebug: boolean = process.env.PWDEBUG === "1" || process.env.PWDEBUG === "true";
   static readonly agentName: string = "kuack-agent";
+
+  /**
+   * External Agent URL. When set, tests connect to this existing agent
+   * instead of deploying a new one via Helm. Useful for testing against
+   * devspace deployments.
+   */
+  static readonly externalAgentURL: string = process.env.AGENT_URL ?? "";
+
+  /**
+   * External Node URL. When set, tests connect to this existing node
+   * instead of deploying a new one via Helm. Useful for testing against
+   * devspace deployments.
+   */
+  static readonly externalNodeURL: string = process.env.NODE_URL ?? "";
 }

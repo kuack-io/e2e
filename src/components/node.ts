@@ -6,12 +6,14 @@ import { Config } from "./config";
 
 /**
  * Node component for managing Kuack node instances in tests.
+ * When NODE_URL is set, uses an existing external node instead of deploying one.
  */
 export class Node {
   private readonly featureName: string;
   private readonly scenarioName: string;
   private readonly randomSuffix: string;
   private readonly releaseName: string;
+  private readonly useExternal: boolean;
   private localPort?: number;
   private nodeURL?: string;
 
@@ -20,12 +22,19 @@ export class Node {
     this.scenarioName = scenarioName;
     this.randomSuffix = Tools.randomString(10);
     this.releaseName = `kuack-node-${this.randomSuffix}`;
+    this.useExternal = Config.externalNodeURL !== "";
   }
 
   /**
-   * Initialize the node by installing it via Helm with feature and scenario labels.
+   * Initialize the node by installing it via Helm or using an external URL.
    */
   public async init(): Promise<void> {
+    if (this.useExternal) {
+      console.log(`[Node] Using external node at ${Config.externalNodeURL}`);
+      this.nodeURL = Config.externalNodeURL;
+      return;
+    }
+
     const values = [
       "agent.enabled=false",
       `fullnameOverride=${this.releaseName}`,
@@ -59,8 +68,14 @@ export class Node {
 
   /**
    * Destroy the node by uninstalling the Helm release.
+   * Does nothing if using an external node.
    */
   public async destroy(): Promise<void> {
+    if (this.useExternal) {
+      console.log("[Node] Using external node, skipping cleanup");
+      return;
+    }
+
     if (!K8s.isInCluster() && this.localPort !== undefined) {
       console.log(`[Kubernetes] Stopping port-forward: localhost:${this.localPort} -> svc/${this.releaseName}:8080`);
       await K8s.stopPortForward(this.localPort);
@@ -85,7 +100,11 @@ export class Node {
    * @returns The node pod logs as a string.
    */
   public async getLogs(): Promise<string> {
-    const labelSelector = `app.kubernetes.io/instance=${this.releaseName}`;
+    // External mode: use standard app name label (e.g., devspace deployment)
+    // Normal mode: use instance label with unique release name
+    const labelSelector = this.useExternal
+      ? "app.kubernetes.io/name=kuack-node"
+      : `app.kubernetes.io/instance=${this.releaseName}`;
     return K8s.getPodLogs(labelSelector);
   }
 }

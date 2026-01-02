@@ -7,22 +7,31 @@ import { Config } from "./config";
 /**
  * Agent component for managing Kuack agent instances in tests.
  * Each parallel worker gets its own Agent instance with a unique name and port.
+ * When AGENT_URL is set, uses an existing external agent instead of deploying one.
  */
 export class Agent {
   private readonly randomSuffix: string;
   private readonly releaseName: string;
+  private readonly useExternal: boolean;
   private localPort?: number;
   private agentURL?: string;
 
   constructor() {
     this.randomSuffix = Tools.randomString(10);
     this.releaseName = `kuack-agent-${this.randomSuffix}`;
+    this.useExternal = Config.externalAgentURL !== "";
   }
 
   /**
-   * Initialize the agent by installing it via Helm.
+   * Initialize the agent by installing it via Helm or using an external URL.
    */
   public async init(): Promise<void> {
+    if (this.useExternal) {
+      console.log(`[Agent] Using external agent at ${Config.externalAgentURL}`);
+      this.agentURL = Config.externalAgentURL;
+      return;
+    }
+
     const values = ["node.enabled=false", `fullnameOverride=${this.releaseName}`];
     if (Config.testId) {
       // NOTE: This must use an escaped dot so Helm treats "kuack.io/..." as one key segment.
@@ -51,8 +60,14 @@ export class Agent {
 
   /**
    * Destroy the agent by uninstalling the Helm release.
+   * Does nothing if using an external agent.
    */
   public async destroy(): Promise<void> {
+    if (this.useExternal) {
+      console.log("[Agent] Using external agent, skipping cleanup");
+      return;
+    }
+
     if (!K8s.isInCluster() && this.localPort !== undefined) {
       console.log(`[Kubernetes] Stopping port-forward: localhost:${this.localPort} -> svc/${this.releaseName}:8080`);
       await K8s.stopPortForward(this.localPort);
