@@ -2,8 +2,7 @@
 !package.json
 !package-lock.json
 !tsconfig.json
+!docker-entrypoint.sh
 !src/
-!manifests/
+!features/
 !cucumber.js
-!playwright.config.ts
-!eslint.config.js

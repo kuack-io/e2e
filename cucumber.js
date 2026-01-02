@@ -2,8 +2,7 @@
 module.exports = {
   default: {
     paths: ['features/**/*.feature'],
-    require: ['src/**/*.ts'],
-    requireModule: ['tsx'],
+    require: ['dist/**/*.js'],
     format: [
       'progress-bar',
       'summary',
