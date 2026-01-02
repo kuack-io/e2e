@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/kuack-io/e2e/compare/1.0.1...1.1.0) (2026-01-02)
+
+### Features
+
+* can target local setups ([c7486c2](https://github.com/kuack-io/e2e/commit/c7486c20cf38aa48eb713b0587d1e853805b10c0))
+
 ## [1.0.1](https://github.com/kuack-io/e2e/compare/1.0.0...1.0.1) (2026-01-02)
 
 ### Bug Fixes
