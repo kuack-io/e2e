@@ -1,7 +1,7 @@
 import { Network } from "./network";
-import { AppsV1Api, CoreV1Api, KubeConfig } from "@kubernetes/client-node";
-import { ChildProcess, spawn } from "child_process";
+import { AppsV1Api, CoreV1Api, KubeConfig, PortForward, V1Pod } from "@kubernetes/client-node";
 import * as fs from "fs";
+import * as net from "net";
 
 /**
  * Configuration for port forwarding a Kubernetes service.
@@ -21,7 +21,7 @@ export abstract class K8s {
   private static namespace: string;
   private static kubeConfig: KubeConfig;
   private static inCluster: boolean;
-  private static portForwards: Map<number, ChildProcess> = new Map();
+  private static portForwards: Map<number, net.Server> = new Map();
 
   private static readonly inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace";
   /**
@@ -111,23 +111,89 @@ export abstract class K8s {
     console.log(`[Kubernetes] Starting port-forward: localhost:${localPort} -> svc/${serviceName}:${servicePort}`);
 
     // If we already have a port-forward on this local port (previous scenario),
-    // stop it first to avoid "address already in use" and leaked kubectl processes.
+    // stop it first to avoid "address already in use".
     await K8s.stopPortForward(localPort);
     await Network.assertLocalPortFree(localPort);
 
-    // Use stdio: 'ignore' to avoid keeping Node.js event loop alive.
-    const proc = spawn(
-      "kubectl",
-      ["port-forward", `svc/${serviceName}`, `${localPort}:${servicePort}`, "-n", K8s.namespace],
-      { stdio: "ignore", detached: true },
-    );
+    // Find a pod backing the service and resolve target port
+    const { podName, targetPort } = await K8s.findPodForService(serviceName, servicePort);
+    console.log(`[Kubernetes] Found pod ${podName} for service ${serviceName} (target port: ${targetPort})`);
 
-    // Allow Node.js to exit even if process is still running
-    proc.unref();
+    // Create port forwarder
+    const forward = new PortForward(K8s.kubeConfig);
 
-    K8s.portForwards.set(localPort, proc);
+    // Create local TCP server to handle connections
+    const server = net.createServer((socket) => {
+      forward.portForward(K8s.namespace, podName, [targetPort], socket, null, socket);
+    });
 
-    await K8s.waitForPortForwardReady(localPort, proc);
+    // Start listening
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(localPort, "127.0.0.1", () => {
+        server.removeListener("error", reject);
+        resolve();
+      });
+    });
+
+    K8s.portForwards.set(localPort, server);
+    console.log(`[Kubernetes] Port-forward ready on localhost:${localPort}`);
+  }
+
+  /**
+   * Find a pod name that backs a given service and resolve the target port.
+   * @param serviceName - The service name.
+   * @param servicePort - The service port to resolve to a target port.
+   * @returns The pod name and target port.
+   */
+  private static async findPodForService(
+    serviceName: string,
+    servicePort: number,
+  ): Promise<{ podName: string; targetPort: number }> {
+    // Get the service to find its selector and target port
+    const service = await K8s.core.readNamespacedService({
+      name: serviceName,
+      namespace: K8s.namespace,
+    });
+
+    const selector = service.spec?.selector;
+    if (!selector || Object.keys(selector).length === 0) {
+      throw new Error(`Service ${serviceName} has no selector`);
+    }
+
+    // Find the target port for the given service port
+    const portSpec = service.spec?.ports?.find((p) => p.port === servicePort);
+    if (!portSpec) {
+      throw new Error(`Service ${serviceName} has no port ${servicePort}`);
+    }
+
+    // targetPort can be a number or a named port string; we only support numeric
+    const targetPort =
+      typeof portSpec.targetPort === "number"
+        ? portSpec.targetPort
+        : typeof portSpec.targetPort === "object" && typeof (portSpec.targetPort as unknown) === "number"
+          ? (portSpec.targetPort as unknown as number)
+          : servicePort; // fallback to servicePort if targetPort not specified
+
+    // Convert selector to label selector string
+    const labelSelector = Object.entries(selector)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(",");
+
+    // Find pods matching the selector
+    const pods = await K8s.core.listNamespacedPod({
+      namespace: K8s.namespace,
+      labelSelector,
+    });
+
+    // Find a running pod
+    const runningPod = pods.items.find((pod: V1Pod) => pod.status?.phase === "Running" && pod.metadata?.name);
+
+    if (!runningPod?.metadata?.name) {
+      throw new Error(`No running pods found for service ${serviceName}`);
+    }
+
+    return { podName: runningPod.metadata.name, targetPort };
   }
 
   /**
@@ -135,25 +201,15 @@ export abstract class K8s {
    * @param localPort - The local port that was forwarded.
    */
   public static async stopPortForward(localPort: number): Promise<void> {
-    const proc = K8s.portForwards.get(localPort);
-    if (!proc) {
+    const server = K8s.portForwards.get(localPort);
+    if (!server) {
       return;
     }
 
-    try {
-      proc.removeAllListeners();
-      if (proc.pid && proc.exitCode === null) {
-        // Kill the process group (negative PID) since we used detached: true.
-        // This is best-effort and must not throw.
-        try {
-          process.kill(-proc.pid, "SIGKILL");
-        } catch {
-          // ignore
-        }
-      }
-    } finally {
-      K8s.portForwards.delete(localPort);
-    }
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
+    K8s.portForwards.delete(localPort);
   }
 
   /**
@@ -168,22 +224,6 @@ export abstract class K8s {
 
     const ports = Array.from(K8s.portForwards.keys());
     await Promise.allSettled(ports.map((p) => K8s.stopPortForward(p)));
-  }
-
-  private static async waitForPortForwardReady(localPort: number, proc: ChildProcess): Promise<void> {
-    const deadlineMs = Date.now() + 15_000;
-    while (Date.now() < deadlineMs) {
-      if (proc.exitCode !== null) {
-        throw new Error(`Port-forward process exited with code ${proc.exitCode}`);
-      }
-      const ok = await Network.canConnect(localPort);
-      if (ok) {
-        console.log(`[Kubernetes] Port-forward ready on localhost:${localPort}`);
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 150));
-    }
-    throw new Error(`Port-forward did not become ready on localhost:${localPort} within timeout`);
   }
 
   /**
