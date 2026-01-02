@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/kuack-io/e2e/compare/1.0.0...1.0.1) (2026-01-02)
+
+### Bug Fixes
+
+* packaging ([d0acc0e](https://github.com/kuack-io/e2e/commit/d0acc0efa03bd3c20dedf6577d4b5e44027e41cf))
+* report generation with allure 3 ([4ba6aa8](https://github.com/kuack-io/e2e/commit/4ba6aa82fde7c3792da7bc9bfd364ffb897ba850))
+
 ## 1.0.0 (2026-01-01)
 
 ### Features
