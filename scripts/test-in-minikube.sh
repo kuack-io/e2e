@@ -27,7 +27,9 @@ cleanup_existing_job() {
 
 cleanup_artifacts() {
     echo "Cleaning up previous artifacts..."
-    minikube ssh "rm -rf /tmp/e2e-allure-results" 2>/dev/null || true
+    # Use sudo to handle permission issues with files created by pods running as different user
+    # Redirect stderr to avoid showing permission errors if cleanup fails
+    minikube ssh "sudo rm -rf /tmp/e2e-allure-results" 2>/dev/null || true
 }
 
 apply_manifest() {
@@ -82,18 +84,6 @@ download_allure_results() {
     minikube ssh "rm -f /tmp/allure-results.tar"
 }
 
-generate_allure_report() {
-    echo ""
-    echo "Generating Allure report..."
-    npm run report:generate
-}
-
-open_allure_report() {
-    echo ""
-    echo "Opening Allure report..."
-    npm run report:open
-}
-
 cleanup() {
     echo ""
     echo "Cleaning up Kubernetes resources..."
@@ -116,8 +106,6 @@ main() {
     get_logs
     check_job_status
     download_allure_results
-    generate_allure_report
-    open_allure_report
 }
 
 # Register cleanup function to run on exit
