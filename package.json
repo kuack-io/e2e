@@ -12,38 +12,42 @@
     "test": "rm -rf allure-results && cucumber-js",
     "test:debug": "PWDEBUG=1 cucumber-js",
     "test:parallel": "cucumber-js --parallel ${CUCUMBER_WORKERS:-4}",
-    "report:generate": "rm -rf allure-report && npx allure generate --output allure-report allure-results",
-    "report:serve": "npx allure serve allure-results",
+    "report:generate": "allure awesome allure-results",
+    "report:open": "allure open allure-report",
     "clean": "rm -rf dist node_modules/.cache allure-results allure-report"
   },
   "keywords": [
     "kuack",
+    "testing",
     "e2e",
-    "cucumber",
     "bdd",
-    "testing"
+    "cucumber",
+    "allure"
   ],
   "author": "Kuack Team",
   "license": "Apache-2.0",
   "dependencies": {
     "@cucumber/cucumber": "^12.5.0",
-    "@cucumber/pretty-formatter": "^2.4.1",
     "@kubernetes/client-node": "1.4.0",
     "@playwright/test": "^1.57.0",
-    "allure-cucumberjs": "^3.4.3",
-    "allure-js-commons": "^3.4.3"
+    "allure-cucumberjs": "^3.4.3"
   },
   "devDependencies": {
+    "@allurereport/plugin-awesome": "^3.0.0",
+    "@cucumber/pretty-formatter": "^2.4.1",
     "@eslint/js": "^9.39.2",
     "@trivago/prettier-plugin-sort-imports": "^6.0.0",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
-    "allure-commandline": "^2.36.0",
+    "allure": "^3.0.0",
     "eslint": "^9.39.2",
     "eslint-plugin-jsdoc": "^61.5.0",
     "prettier": "^3.2.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "underscore": "^1.13.7"
   }
 }

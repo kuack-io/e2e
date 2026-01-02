@@ -91,7 +91,7 @@ generate_allure_report() {
 open_allure_report() {
     echo ""
     echo "Opening Allure report..."
-    xdg-open ./allure-report/index.html
+    npm run report:open
 }
 
 cleanup() {
