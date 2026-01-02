@@ -29,9 +29,9 @@ spec:
               cpu: "1000m"
           volumeMounts:
             - name: artifacts
-              mountPath: /e2e/allure-report
+              mountPath: /e2e/allure-results
       volumes:
         - name: artifacts
           hostPath:
-            path: /tmp/e2e-allure-report
+            path: /tmp/e2e-allure-results
             type: DirectoryOrCreate
