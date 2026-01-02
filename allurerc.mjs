@@ -10,7 +10,6 @@ export default defineConfig({
       options: {
         singleFile: true,
         theme: "auto", // follow system light/dark mode
-
       },
     },
   },

@@ -23,13 +23,16 @@ audit:
 
 check: format lint type-check audit
 
-test-local: build
+test-cleanup:
+	rm -rf allure-results allure-report
+
+test-local: test-cleanup build
 	npm test
 
-test-local-parallel: build
+test-local-parallel: test-cleanupbuild
 	npm run test:parallel
 
-test-minikube:
+test-minikube: test-cleanup
 	./scripts/test-in-minikube.sh
 
 report:
