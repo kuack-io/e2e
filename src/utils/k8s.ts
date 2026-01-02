@@ -1,7 +1,6 @@
 import { Network } from "./network";
 import { AppsV1Api, CoreV1Api, KubeConfig, PortForward, V1Pod } from "@kubernetes/client-node";
 import * as fs from "fs";
-import * as net from "net";
 
 /**
  * Configuration for port forwarding a Kubernetes service.
@@ -21,7 +20,6 @@ export abstract class K8s {
   private static namespace: string;
   private static kubeConfig: KubeConfig;
   private static inCluster: boolean;
-  private static portForwards: Map<number, net.Server> = new Map();
 
   private static readonly inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace";
   /**
@@ -52,7 +50,7 @@ export abstract class K8s {
    * Clean up resources including port forwards.
    */
   public static async destroy(): Promise<void> {
-    await K8s.stopAllPortForwards();
+    await Network.stopAllTCPServers();
   }
 
   /**
@@ -112,7 +110,7 @@ export abstract class K8s {
 
     // If we already have a port-forward on this local port (previous scenario),
     // stop it first to avoid "address already in use".
-    await K8s.stopPortForward(localPort);
+    await Network.stopTCPServer(localPort);
     await Network.assertLocalPortFree(localPort);
 
     // Find a pod backing the service and resolve target port
@@ -122,21 +120,18 @@ export abstract class K8s {
     // Create port forwarder
     const forward = new PortForward(K8s.kubeConfig);
 
-    // Create local TCP server to handle connections
-    const server = net.createServer((socket) => {
-      forward.portForward(K8s.namespace, podName, [targetPort], socket, null, socket);
+    // Create local TCP server using Network utility for pure network operations
+    await Network.createTCPServer({
+      port: localPort,
+      host: "127.0.0.1",
+      onConnection: (socket) => {
+        forward.portForward(K8s.namespace, podName, [targetPort], socket, null, socket);
+      },
+      onError: (error) => {
+        console.warn(`[Kubernetes] Port-forward error on ${localPort}:`, error.message);
+      },
     });
 
-    // Start listening
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(localPort, "127.0.0.1", () => {
-        server.removeListener("error", reject);
-        resolve();
-      });
-    });
-
-    K8s.portForwards.set(localPort, server);
     console.log(`[Kubernetes] Port-forward ready on localhost:${localPort}`);
   }
 
@@ -201,29 +196,7 @@ export abstract class K8s {
    * @param localPort - The local port that was forwarded.
    */
   public static async stopPortForward(localPort: number): Promise<void> {
-    const server = K8s.portForwards.get(localPort);
-    if (!server) {
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    });
-    K8s.portForwards.delete(localPort);
-  }
-
-  /**
-   * Stop all active port forwards.
-   */
-  public static async stopAllPortForwards(): Promise<void> {
-    if (K8s.portForwards.size === 0) {
-      return;
-    }
-
-    console.log(`[Kubernetes] Stopping ${K8s.portForwards.size} port-forward(s)`);
-
-    const ports = Array.from(K8s.portForwards.keys());
-    await Promise.allSettled(ports.map((p) => K8s.stopPortForward(p)));
+    await Network.stopTCPServer(localPort);
   }
 
   /**
