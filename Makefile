@@ -34,7 +34,7 @@ test-minikube:
 
 report:
 	npm run report:generate
-	xdg-open ./allure-report/index.html
+	npm run report:open
 
 clean:
 	npm run clean
