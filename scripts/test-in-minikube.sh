@@ -32,20 +32,65 @@ cleanup_artifacts() {
     minikube ssh "sudo rm -rf /tmp/e2e-allure-results" 2>/dev/null || true
 }
 
+prepare_helm_chart() {
+    # If HELM_CHART is set, assume it's a local path and copy it to minikube
+    if [ -n "${HELM_CHART:-}" ]; then
+        echo "Copying helm chart to minikube: $HELM_CHART"
+        local chart_name=$(basename "$HELM_CHART")
+        local chart_dir=$(dirname "$HELM_CHART")
+        local temp_tar=$(mktemp)
+        tar -czf "$temp_tar" -C "$chart_dir" "$chart_name"
+
+        # Copy to minikube
+        local minikube_tar="/tmp/helm-chart-$$.tar"
+        minikube cp "$temp_tar" "$minikube_tar"
+        minikube ssh "mkdir -p /tmp/helm-chart && cd /tmp/helm-chart && tar -xzf $minikube_tar && sudo rm -f $minikube_tar"
+        rm -f "$temp_tar"
+
+        # Update HELM_CHART to point to the mounted path
+        export HELM_CHART="/tmp/helm-chart/$chart_name"
+    fi
+}
+
 apply_manifest() {
     local namespace=$1
     echo "Applying test job manifests to namespace: $namespace"
     export NAMESPACE="$namespace"
 
+    # Export helm-related environment variables for envsubst
+    export HELM_CHART="${HELM_CHART:-}"
+    export HELM_CHART_VERSION="${HELM_CHART_VERSION:-}"
+    export AGENT_VERSION="${AGENT_VERSION:-}"
+    export NODE_VERSION="${NODE_VERSION:-}"
+    export AGENT_URL="${AGENT_URL:-}"
+    export NODE_URL="${NODE_URL:-}"
+
     kubectl apply -f manifests/serviceaccount.yaml
     kubectl apply -f manifests/clusterrole.yaml
     envsubst < manifests/clusterrolebinding.yaml | kubectl apply -f -
-    kubectl apply -f manifests/job-minikube.yaml
+    envsubst < manifests/job-minikube.yaml | kubectl apply -f -
 }
 
 wait_for_job() {
     echo "Waiting for job to complete..."
-    kubectl wait --for=condition=complete --timeout=600s job/e2e-tests || true
+    local timeout=600
+    local elapsed=0
+    local interval=5
+
+    while [ $elapsed -lt $timeout ]; do
+        local complete=$(kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null)
+        local failed=$(kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null)
+
+        if [ "$complete" = "True" ] || [ "$failed" = "True" ]; then
+            return 0
+        fi
+
+        sleep $interval
+        elapsed=$((elapsed + interval))
+    done
+
+    echo "Timeout waiting for job to complete"
+    return 0
 }
 
 get_logs() {
@@ -57,10 +102,29 @@ get_logs() {
 check_job_status() {
     echo ""
     echo "==================== Job Status =================="
-    if kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' | grep -q "True"; then
+    local complete=$(kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null)
+    local failed=$(kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null)
+
+    # Check pod exit code for more accurate status
+    local pod_name=$(kubectl get pods -l job-name=e2e-tests -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    if [ -n "$pod_name" ]; then
+        local exit_code=$(kubectl get pod "$pod_name" -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null)
+        if [ -n "$exit_code" ]; then
+            if [ "$exit_code" = "0" ]; then
+                echo "Tests PASSED (pod exited with code 0)"
+                return 0
+            else
+                echo "Tests FAILED (pod exited with code $exit_code)"
+                return 1
+            fi
+        fi
+    fi
+
+    # Fallback to job conditions
+    if [ "$complete" = "True" ]; then
         echo "Tests PASSED"
         return 0
-    elif kubectl get job e2e-tests -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' | grep -q "True"; then
+    elif [ "$failed" = "True" ]; then
         echo "Tests FAILED"
         return 1
     else
@@ -88,7 +152,8 @@ cleanup() {
     echo ""
     echo "Cleaning up Kubernetes resources..."
     local namespace=$(get_namespace)
-    kubectl delete job e2e-tests -n "$namespace" --ignore-not-found=true
+    # Keep the job for debugging - only clean up RBAC resources
+    # kubectl delete job e2e-tests -n "$namespace" --ignore-not-found=true
     kubectl delete serviceaccount e2e-tests -n "$namespace" --ignore-not-found=true
     kubectl delete clusterrole e2e-tests --ignore-not-found=true
     kubectl delete clusterrolebinding e2e-tests --ignore-not-found=true
@@ -101,6 +166,7 @@ main() {
     build_image
     cleanup_existing_job
     cleanup_artifacts
+    prepare_helm_chart
     apply_manifest "$namespace"
     wait_for_job
     get_logs
