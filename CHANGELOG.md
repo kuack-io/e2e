@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/kuack-io/e2e/compare/1.1.0...1.1.1) (2026-01-03)
+
+### Bug Fixes
+
+* local chart support ([fc6f650](https://github.com/kuack-io/e2e/commit/fc6f650401166d8aae55858e967d574836782619))
+
 ## [1.1.0](https://github.com/kuack-io/e2e/compare/1.0.1...1.1.0) (2026-01-02)
 
 ### Features
