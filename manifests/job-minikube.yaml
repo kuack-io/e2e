@@ -23,6 +23,18 @@ spec:
               value: "local"
             - name: CUCUMBER_WORKERS
               value: "2"
+            - name: HELM_CHART
+              value: "${HELM_CHART}"
+            - name: HELM_CHART_VERSION
+              value: "${HELM_CHART_VERSION}"
+            - name: AGENT_VERSION
+              value: "${AGENT_VERSION}"
+            - name: NODE_VERSION
+              value: "${NODE_VERSION}"
+            - name: AGENT_URL
+              value: "${AGENT_URL}"
+            - name: NODE_URL
+              value: "${NODE_URL}"
           resources:
             requests:
               memory: "2Gi"
@@ -30,8 +42,15 @@ spec:
           volumeMounts:
             - name: artifacts
               mountPath: /e2e/allure-results
+            - name: helm-chart
+              mountPath: /tmp/helm-chart
+              readOnly: true
       volumes:
         - name: artifacts
           hostPath:
             path: /tmp/e2e-allure-results
+            type: DirectoryOrCreate
+        - name: helm-chart
+          hostPath:
+            path: /tmp/helm-chart
             type: DirectoryOrCreate

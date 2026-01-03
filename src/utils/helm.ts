@@ -21,7 +21,7 @@ export abstract class Helm extends Cmd {
   }): Promise<void> {
     const namespace = K8s.getNamespace();
     const args: string[] = ["helm", "install", params.releaseName, params.chartRef, "--wait", "--namespace", namespace];
-    if (params.chartVersion !== "latest") {
+    if (params.chartVersion && params.chartVersion !== "latest") {
       args.push("--version", params.chartVersion);
     }
     if (params.values) {
@@ -57,21 +57,27 @@ export abstract class Helm extends Cmd {
     const args = ["helm", "uninstall", releaseName, "--wait", "--namespace", namespace];
     const printable = args.join(" ");
     console.log(`[Helm] Deleting: ${printable}`);
-    const result = await Cmd.run(args);
-    if (result.exitCode !== 0) {
-      // Check if the error is "release: not found" - this is acceptable during cleanup
-      if (result.stderr.includes("release: not found") || result.stderr.includes("not found")) {
-        console.log(`[Helm] Release ${releaseName} not found, skipping uninstall`);
-        return;
+    try {
+      const result = await Cmd.run(args);
+      // Always log output for debugging
+      if (result.stdout) {
+        console.log(result.stdout);
       }
-      // For other errors, throw
-      throw new Error(`Command failed (${result.exitCode}): ${printable}\n${result.stderr || result.stdout}`);
-    }
-    if (result.stdout) {
-      console.log(result.stdout);
-    }
-    if (result.stderr) {
-      console.log(result.stderr);
+      if (result.stderr) {
+        console.log(result.stderr);
+      }
+      if (result.exitCode !== 0) {
+        // Check if the error is "release: not found" - this is acceptable during cleanup
+        if (result.stderr.includes("release: not found") || result.stderr.includes("not found")) {
+          console.log(`[Helm] Release ${releaseName} not found, skipping uninstall`);
+          return;
+        }
+        // For other errors, log but don't throw during cleanup
+        console.error(`[Helm] Delete failed (${result.exitCode}): ${printable}`);
+      }
+    } catch (error) {
+      // Log errors but don't throw - cleanup should be best-effort
+      console.error(`[Helm] Delete error for ${releaseName}:`, error);
     }
   }
 }
