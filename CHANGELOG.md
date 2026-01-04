@@ -1,3 +1,15 @@
+## [1.2.0](https://github.com/kuack-io/e2e/compare/1.1.1...1.2.0) (2026-01-04)
+
+### Features
+
+* new features ([53a0ec6](https://github.com/kuack-io/e2e/commit/53a0ec67efea56440b9a4f77275342830b56f403))
+* new tests and utils ([e28f6b2](https://github.com/kuack-io/e2e/commit/e28f6b25792b9ce4e922518a1202d826f7602aa8))
+
+### Bug Fixes
+
+* logical issues ([c37ff8c](https://github.com/kuack-io/e2e/commit/c37ff8cfc4ff203ae9b2385acb9d1af14866a698))
+* remove trailing slash ([53cf130](https://github.com/kuack-io/e2e/commit/53cf13081be7da82bf4fcaca28e38fceb064d4fb))
+
 ## [1.1.1](https://github.com/kuack-io/e2e/compare/1.1.0...1.1.1) (2026-01-03)
 
 ### Bug Fixes
