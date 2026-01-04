@@ -21,5 +21,5 @@ Then("Agent executes Checker pod successfully", async function (this: CustomWorl
   const pod = this.getSinglePod();
   await podHelpers.assertPodFinishedSusscessfully(pod);
   await podHelpers.assertPodLogsContainCheckerResult(pod);
-  await podHelpers.assertPodProcessedInCluster(pod);
+  await podHelpers.assertPodProcessedOnAgent(pod);
 });

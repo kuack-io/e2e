@@ -113,6 +113,6 @@ export class Node {
     const labelSelector = this.useExternal
       ? "app.kubernetes.io/name=kuack-node"
       : `app.kubernetes.io/instance=${this.releaseName}`;
-    return K8s.getPodLogs(labelSelector);
+    return K8s.getPodLogsByLabelSelector(labelSelector);
   }
 }

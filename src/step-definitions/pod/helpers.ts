@@ -71,7 +71,7 @@ export async function assertPodLogsContainMessage(pod: V1Pod, message: string): 
   if (!podName) {
     throw new Error("Pod must have a name");
   }
-  const logs = await K8s.getPodLogs(podName);
+  const logs = await K8s.getPodLogsByName(podName);
 
   if (!logs.includes(message)) {
     throw new Error(
@@ -114,4 +114,29 @@ export async function assertPodProcessedInCluster(pod: V1Pod): Promise<void> {
     throw new Error(`Pod ${podName} was scheduled on kuack node "${nodeName}", not in cluster`);
   }
   console.log(`Pod ${podName} was processed in the cluster`);
+}
+
+/**
+ * Asserts that a pod was processed on an Agent (kuack node).
+ * @param pod - The pod to check.
+ * @throws Error if the pod was not scheduled on a kuack node or not scheduled yet.
+ */
+export async function assertPodProcessedOnAgent(pod: V1Pod): Promise<void> {
+  console.log("Asserting that pod was processed on agent");
+  const podName = pod.metadata?.name;
+  if (!podName) {
+    throw new Error("Pod must have a name");
+  }
+  const currentPod = await K8s.getPod(podName);
+
+  const nodeName = currentPod.spec?.nodeName;
+  if (!nodeName) {
+    throw new Error(`Pod ${podName} has not been scheduled yet (no nodeName)`);
+  }
+
+  const isKuack = await K8s.isKuackNode(nodeName);
+  if (!isKuack) {
+    throw new Error(`Pod ${podName} was scheduled on cluster node "${nodeName}", not on kuack node`);
+  }
+  console.log(`Pod ${podName} was processed on agent (kuack node: ${nodeName})`);
 }
