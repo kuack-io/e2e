@@ -1,5 +1,5 @@
 import { Network } from "./network";
-import { AppsV1Api, CoreV1Api, KubeConfig, PortForward, V1Pod } from "@kubernetes/client-node";
+import { AppsV1Api, CoreV1Api, KubeConfig, PortForward, V1Node, V1Pod } from "@kubernetes/client-node";
 import * as fs from "fs";
 
 /**
@@ -68,6 +68,15 @@ export abstract class K8s {
    */
   public static getNamespace(): string {
     return K8s.namespace;
+  }
+
+  /**
+   * Get the CoreV1Api client.
+   * K8s must be initialized first.
+   * @returns The CoreV1Api client instance.
+   */
+  public static getCoreApi(): CoreV1Api {
+    return K8s.core;
   }
 
   /**
@@ -227,5 +236,171 @@ export abstract class K8s {
     });
 
     return response;
+  }
+
+  /**
+   * Type guard to check if an error has a statusCode property.
+   * @param error - The error to check
+   * @returns True if the error has a statusCode property
+   */
+  private static hasStatusCode(error: unknown): error is { statusCode: number } {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      typeof (error as { statusCode: unknown }).statusCode === "number"
+    );
+  }
+
+  /**
+   * Apply a pod to the cluster using the K8s API client.
+   * @param pod - The pod to apply
+   * @returns The created pod from the API
+   */
+  public static async applyPod(pod: V1Pod): Promise<V1Pod> {
+    const namespace = pod.metadata?.namespace || K8s.getNamespace();
+    const name = pod.metadata?.name;
+
+    if (!name) {
+      throw new Error("Pod must have a name");
+    }
+
+    try {
+      // Try to create the pod
+      const response = await K8s.core.createNamespacedPod({
+        namespace,
+        body: pod,
+      });
+      // The response from @kubernetes/client-node is the V1Pod directly
+      return response as unknown as V1Pod;
+    } catch (error: unknown) {
+      // If pod already exists, update it
+      if (K8s.hasStatusCode(error) && error.statusCode === 409) {
+        const response = await K8s.core.replaceNamespacedPod({
+          name,
+          namespace,
+          body: pod,
+        });
+        return response as unknown as V1Pod;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a pod from the cluster (idempotent).
+   * @param pod - The pod to delete
+   */
+  public static async deletePod(pod: V1Pod): Promise<void> {
+    const namespace = pod.metadata?.namespace || K8s.getNamespace();
+    const name = pod.metadata?.name;
+
+    if (!name) {
+      throw new Error("Pod must have a name");
+    }
+
+    try {
+      await K8s.core.deleteNamespacedPod({
+        name,
+        namespace,
+      });
+    } catch (error: unknown) {
+      // Ignore 404 errors (pod doesn't exist) - idempotent behavior
+      if (!K8s.hasStatusCode(error) || error.statusCode !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Get an existing pod from the cluster.
+   * @param name - Pod name
+   * @returns The pod if found
+   */
+  public static async getPod(name: string): Promise<V1Pod> {
+    const ns = K8s.getNamespace();
+
+    const response = await K8s.core.readNamespacedPod({
+      name,
+      namespace: ns,
+    });
+
+    // The response from @kubernetes/client-node is the V1Pod directly
+    return response as unknown as V1Pod;
+  }
+
+  /**
+   * Wait for a pod to reach a specific phase.
+   * @param name - Pod name
+   * @param phase - Desired phase (Pending, Running, Succeeded, Failed, Unknown)
+   * @param timeoutMs - Timeout in milliseconds (default: 60000)
+   * @returns The pod in the desired phase
+   */
+  public static async waitForPodPhase(
+    name: string,
+    phase: "Pending" | "Running" | "Succeeded" | "Failed" | "Unknown",
+    timeoutMs: number = 60000,
+  ): Promise<V1Pod> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      const pod = await K8s.getPod(name);
+
+      if (pod.status?.phase === phase) {
+        return pod;
+      }
+
+      // Wait a bit before checking again
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    throw new Error(`Pod ${name} did not reach phase ${phase} within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Get a node from the cluster by name.
+   * @param name - Node name
+   * @returns The node if found
+   */
+  public static async getNode(name: string): Promise<V1Node> {
+    const response = await K8s.core.readNode({ name });
+
+    // The response from @kubernetes/client-node is the V1Node directly
+    return response as unknown as V1Node;
+  }
+
+  /**
+   * Check if a node is a Kuack node by examining multiple properties.
+   * @param nodeName - Node name to check
+   * @returns True if the node is a Kuack node, false otherwise
+   */
+  public static async isKuackNode(nodeName: string): Promise<boolean> {
+    // Quick check: node name pattern
+    if (nodeName.includes("kuack-node")) {
+      return true;
+    }
+
+    // Fetch the actual node object and check its properties
+    const node = await K8s.getNode(nodeName);
+
+    // Check node labels
+    const nodeLabels = node.metadata?.labels;
+    if (nodeLabels && nodeLabels["kuack.io/node-type"] === "kuack-node") {
+      return true;
+    }
+
+    // Check node architecture (kuack nodes have wasm32 architecture)
+    const architecture = node.status?.nodeInfo?.architecture;
+    if (architecture === "wasm32") {
+      return true;
+    }
+
+    // Check node OS (kuack nodes have wasm OS)
+    const os = node.status?.nodeInfo?.operatingSystem;
+    if (os === "wasm") {
+      return true;
+    }
+
+    return false;
   }
 }

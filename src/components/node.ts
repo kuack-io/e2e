@@ -96,6 +96,14 @@ export class Node {
   }
 
   /**
+   * Get the release name of the node.
+   * @returns The release name.
+   */
+  public getName(): string {
+    return this.releaseName;
+  }
+
+  /**
    * Get the logs from the node pod.
    * @returns The node pod logs as a string.
    */
