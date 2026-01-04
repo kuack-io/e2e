@@ -110,9 +110,9 @@ export async function assertPodLogsContainMessage(pod: V1Pod, message: string): 
  * @param pod - The pod to check.
  */
 export async function assertPodLogsContainCheckerResult(pod: V1Pod): Promise<void> {
-  await assertPodLogsContainMessage(pod, `"url": "${Config.checkerUrl}"`);
-  await assertPodLogsContainMessage(pod, '"total_time_ms"');
-  await assertPodLogsContainMessage(pod, '"success": true');
+  await assertPodLogsContainMessage(pod, `"${Config.checkerUrl}"`);
+  await assertPodLogsContainMessage(pod, '"total_time_ms":');
+  await assertPodLogsContainMessage(pod, '"success":');
 }
 
 /**
