@@ -214,7 +214,7 @@ export abstract class K8s {
    * @param container - Optional container name if pod has multiple containers.
    * @returns The pod logs as a string.
    */
-  public static async getPodLogs(labelSelector: string, container?: string): Promise<string> {
+  public static async getPodLogsByLabelSelector(labelSelector: string, container?: string): Promise<string> {
     const pods = await K8s.core.listNamespacedPod({
       namespace: K8s.namespace,
       labelSelector,
@@ -229,6 +229,22 @@ export abstract class K8s {
       throw new Error("Pod has no name");
     }
 
+    const response = await K8s.core.readNamespacedPodLog({
+      name: podName,
+      namespace: K8s.namespace,
+      container,
+    });
+
+    return response;
+  }
+
+  /**
+   * Get logs from a pod by pod name.
+   * @param podName - The name of the pod.
+   * @param container - Optional container name if pod has multiple containers.
+   * @returns The pod logs as a string.
+   */
+  public static async getPodLogsByName(podName: string, container?: string): Promise<string> {
     const response = await K8s.core.readNamespacedPodLog({
       name: podName,
       namespace: K8s.namespace,
