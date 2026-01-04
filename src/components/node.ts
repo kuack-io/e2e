@@ -53,7 +53,7 @@ export class Node {
     });
     if (K8s.isInCluster()) {
       // In-cluster: use the service DNS name directly
-      this.nodeURL = `http://${this.releaseName}.${K8s.getNamespace()}.svc.cluster.local:8080/`;
+      this.nodeURL = `http://${this.releaseName}.${K8s.getNamespace()}.svc.cluster.local:8080`;
     } else {
       // Local development: find a free port and set up port forwarding
       this.localPort = await Network.findFreePort();
@@ -62,7 +62,7 @@ export class Node {
         servicePort: 8080,
         localPort: this.localPort,
       });
-      this.nodeURL = `http://localhost:${this.localPort}/`;
+      this.nodeURL = `http://localhost:${this.localPort}`;
     }
   }
 
