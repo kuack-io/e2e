@@ -79,7 +79,7 @@ AfterAll(async function () {
   await K8s.destroy();
 });
 
-Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario: ITestCaseHookParameter) {
+Before({ name: "Initialize scenario" }, async function (this: CustomWorld, scenario: ITestCaseHookParameter) {
   const scenarioName = scenario.pickle.name;
   const featureName = scenario.gherkinDocument?.feature?.name ?? "";
 
@@ -112,7 +112,7 @@ Before({ name: "Initialize test" }, async function (this: CustomWorld, scenario:
   }
 });
 
-After({ name: "Tear down test" }, async function (this: CustomWorld) {
+After({ name: "Cleanup scenario" }, async function (this: CustomWorld) {
   const logs = new Logs();
   logs.start();
   try {
@@ -122,7 +122,7 @@ After({ name: "Tear down test" }, async function (this: CustomWorld) {
     await this.destroy();
 
     // Attach videos from all browsers after they're closed (videos are finalized on close)
-    // Videos are only attached if recording was enabled (Config.playwrightDebug)
+    // Videos are only attached if recording was enabled (Config.recordVideo)
     // Add a small delay to ensure video files are fully written to disk
     await new Promise((resolve) => setTimeout(resolve, 100));
 
