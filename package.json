@@ -36,7 +36,7 @@
     "@allurereport/plugin-awesome": "^3.0.0",
     "@cucumber/pretty-formatter": "^2.4.1",
     "@eslint/js": "^9.39.2",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.1",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
