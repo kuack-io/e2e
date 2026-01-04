@@ -38,7 +38,7 @@ export class Chromium implements BrowserInstance {
 
   /**
    * Launch the browser and navigate to the specified URL.
-   * Video recording is enabled automatically when Config.playwrightDebug is true.
+   * Video recording is enabled when Config.recordVideo is true (default: true).
    * @param url - The URL to navigate to.
    * @param headless - Whether to run in headless mode (default: true).
    */
@@ -46,7 +46,7 @@ export class Chromium implements BrowserInstance {
     this.browser = await chromium.launch({ headless: headless });
     const videoDir = Chromium.getVideoDir();
     this.context = await this.browser.newContext({
-      recordVideo: Config.playwrightDebug
+      recordVideo: Config.recordVideo
         ? {
             dir: videoDir,
             size: { width: 1280, height: 720 },
