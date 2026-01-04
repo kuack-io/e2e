@@ -47,16 +47,40 @@ export async function assertPodFinishedSusscessfully(pod: V1Pod): Promise<void> 
   if (!podName) {
     throw new Error("Pod must have a name");
   }
-  const succeededPod = await K8s.waitForPodPhase(podName, "Succeeded");
 
-  if (succeededPod.status?.phase !== "Succeeded") {
-    const reason = succeededPod.status?.reason || "Unknown";
-    const message = succeededPod.status?.message || "No message";
+  try {
+    await K8s.waitForPodPhase(podName, "Succeeded");
+    console.log(`Pod ${podName} finished successfully`);
+  } catch {
+    // Get the current pod state for better error diagnostics
+    const currentPod = await K8s.getPod(podName);
+    const phase = currentPod.status?.phase || "Unknown";
+    const reason = currentPod.status?.reason || "Unknown";
+    const message = currentPod.status?.message || "No message";
+
+    // Get container status information
+    const containerStatuses = currentPod.status?.containerStatuses || [];
+    const containerErrors: string[] = [];
+    for (const status of containerStatuses) {
+      if (status.state?.waiting) {
+        containerErrors.push(
+          `Container ${status.name} is waiting: ${status.state.waiting.reason || "unknown"} - ${status.state.waiting.message || ""}`,
+        );
+      } else if (status.state?.terminated) {
+        if (status.state.terminated.exitCode !== 0) {
+          containerErrors.push(
+            `Container ${status.name} terminated with exit code ${status.state.terminated.exitCode}: ${status.state.terminated.reason || "unknown"} - ${status.state.terminated.message || ""}`,
+          );
+        }
+      }
+    }
+
+    const containerInfo = containerErrors.length > 0 ? `\nContainer status: ${containerErrors.join("; ")}` : "";
+
     throw new Error(
-      `Pod ${podName} did not finish successfully. Phase: ${succeededPod.status?.phase}, Reason: ${reason}, Message: ${message}`,
+      `Pod ${podName} did not reach phase Succeeded within timeout. Current phase: ${phase}, Reason: ${reason}, Message: ${message}${containerInfo}`,
     );
   }
-  console.log(`Pod ${podName} finished successfully`);
 }
 
 /**
