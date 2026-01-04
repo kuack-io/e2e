@@ -9,7 +9,7 @@ export class Config {
   static readonly nodeVersion: string = process.env.NODE_VERSION || "latest";
   static readonly helmChart: string = process.env.HELM_CHART || "oci://ghcr.io/kuack-io/charts/kuack";
   static readonly playwrightDebug: boolean = process.env.PWDEBUG === "1" || process.env.PWDEBUG === "true";
-  static readonly agentName: string = "kuack-agent";
+  static readonly checkerImage: string = process.env.CHECKER_IMAGE || "ghcr.io/kuack-io/checker:latest";
 
   /**
    * External Agent URL. When set, tests connect to this existing agent
@@ -24,4 +24,8 @@ export class Config {
    * devspace deployments.
    */
   static readonly externalNodeURL: string = process.env.NODE_URL ?? "";
+
+  // Constants
+  static readonly agentName: string = "kuack-agent";
+  static readonly checkerUrl: string = "https://kuack.io";
 }
