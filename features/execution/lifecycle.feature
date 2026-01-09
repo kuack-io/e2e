@@ -1,3 +1,4 @@
+@execution
 Feature: Agent Lifecycle and Handover
   As a Kuack user
   I want to verify that pod processing, counters, and agent handover work correctly

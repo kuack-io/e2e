@@ -1,3 +1,4 @@
+@agent
 Feature: Agent Connectivity
   As a Kuack user
   I want to make sure that Agent can connect to Node

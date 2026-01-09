@@ -1,4 +1,4 @@
-@agent @ui
+@agent
 Feature: Agent UI Interactions
   As a user
   I want to interact with the Agent UI controls

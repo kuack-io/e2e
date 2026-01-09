@@ -1,3 +1,4 @@
+@agent
 Feature: Multiple Agents
   As a Kuack user
   I want to make sure that multiple Agents can connect to the same Node

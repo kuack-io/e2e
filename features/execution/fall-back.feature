@@ -1,3 +1,4 @@
+@execution
 Feature: Fallback Execution
   As a Kuack user
   I want to make sure that workload can run on regular nodes if Agent is missing

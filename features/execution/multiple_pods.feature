@@ -1,3 +1,4 @@
+@execution
 Feature: Multiple Pods Execution
   As a Kuack user
   I want to make sure that the Agent can execute multiple pods

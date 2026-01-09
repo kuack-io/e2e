@@ -1,3 +1,4 @@
+@execution
 Feature: Checker execution
   As a Kuack developer
   I want to make sure that checker can be executed on different nodes

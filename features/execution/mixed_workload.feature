@@ -1,3 +1,4 @@
+@execution
 Feature: Mixed Workload Execution
   As a Kuack user
   I want to be able to execute pods both on Agent and Cluster simultaneously
