@@ -170,12 +170,12 @@ main() {
     apply_manifest "$namespace"
     wait_for_job
     get_logs
-    check_job_status
     download_allure_results
+    check_job_status
 }
 
 # Register cleanup function to run on exit
-trap cleanup EXIT
+trap cleanup EXIT SIGINT SIGTERM
 
 # Entrypoint
 main

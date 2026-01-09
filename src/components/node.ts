@@ -20,9 +20,14 @@ export class Node {
   constructor(featureName: string, scenarioName: string) {
     this.featureName = featureName;
     this.scenarioName = scenarioName;
-    this.randomSuffix = Tools.randomString(10);
-    this.releaseName = `kuack-node-${this.randomSuffix}`;
     this.useExternal = Config.externalNodeURL !== "";
+    if (this.useExternal) {
+      this.randomSuffix = "";
+      this.releaseName = Config.externalNodeName;
+    } else {
+      this.randomSuffix = Tools.randomString(10);
+      this.releaseName = `kuack-node-${this.randomSuffix}`;
+    }
   }
 
   /**

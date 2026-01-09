@@ -12,6 +12,7 @@
     "test": "rm -rf allure-results && cucumber-js",
     "test:debug": "PWDEBUG=1 cucumber-js",
     "test:parallel": "cucumber-js --parallel ${CUCUMBER_WORKERS:-4}",
+    "cleanup:cluster": "node dist/scripts/global-cleanup.js",
     "report:generate": "allure awesome allure-results",
     "report:open": "allure open allure-report",
     "clean": "rm -rf dist node_modules/.cache allure-results allure-report"

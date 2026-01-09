@@ -1,6 +1,7 @@
 import { Agent } from "../components/agent";
 import { Node } from "../components/node";
 import { BrowserInstance } from "../utils/browser";
+import { K8s } from "../utils/k8s";
 import { Logs } from "../utils/logs";
 import { getAgent } from "./hooks";
 import { World, setWorldConstructor } from "@cucumber/cucumber";
@@ -61,6 +62,21 @@ export class CustomWorld extends World {
     const browsers = Array.from(this.browsers.values());
     await Promise.allSettled(browsers.map((b) => b.close()));
     this.browsers.clear();
+
+    // Cleanup any pods created during the test
+    if (this.pods.size > 0) {
+      console.log(`[CustomWorld] Cleaning up ${this.pods.size} pods...`);
+      const pods = Array.from(this.pods.values());
+      const results = await Promise.allSettled(pods.map((pod) => K8s.deletePod(pod)));
+
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          const podName = pods[index].metadata?.name ?? "unknown";
+          console.warn(`[CustomWorld] Failed to cleanup pod ${podName}:`, result.reason);
+        }
+      });
+      this.pods.clear();
+    }
 
     await this.node?.destroy();
   }

@@ -27,9 +27,11 @@ test-cleanup:
 	rm -rf allure-results allure-report
 
 test-local: test-cleanup build
+	npm run cleanup:cluster
 	npm test
 
 test-local-parallel: test-cleanup build
+	npm run cleanup:cluster
 	npm run test:parallel
 
 test-minikube: test-cleanup

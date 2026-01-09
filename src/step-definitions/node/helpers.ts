@@ -23,12 +23,25 @@ export async function assertNodeAcceptsAgent(world: CustomWorld): Promise<void> 
   }
   console.log(`Agent UUID from browser: ${agentUUID}`);
 
-  // Get node logs and verify the agent registration message
-  const nodeLogs = await world.getNode().getLogs();
-  console.log("Checking node logs for agent registration");
-
   // The node logs "Agent <UUID> registered with capacity: ..." when an agent connects
   const expectedMessage = `Agent ${agentUUID} registered with capacity:`;
-  expect(nodeLogs).toContain(expectedMessage);
+
+  await expect
+    .poll(
+      async () => {
+        try {
+          return await world.getNode().getLogs();
+        } catch (e) {
+          console.warn("Failed to get node logs, retrying...", e);
+          return "";
+        }
+      },
+      {
+        // Wait up to 30 seconds for the log to appear
+        timeout: 30000,
+        message: `Node logs did not contain registration message for agent ${agentUUID}`,
+      },
+    )
+    .toContain(expectedMessage);
   console.log(`Node logs confirmed agent ${agentUUID} registration`);
 }
