@@ -1,3 +1,4 @@
+@agent
 Feature: Agent Disconnection
   As a Kuack user
   I want to be able to disconnect the Agent
