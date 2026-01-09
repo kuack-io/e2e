@@ -1,3 +1,14 @@
+## [1.3.0](https://github.com/kuack-io/e2e/compare/1.2.0...1.3.0) (2026-01-09)
+
+### Features
+
+* new tests ([ddf23b0](https://github.com/kuack-io/e2e/commit/ddf23b0f6071a7703f537244b1125d4e2e6257db))
+
+### Bug Fixes
+
+* do not confuse allure with additional report (additionally parsed otherwise) ([0eb05b9](https://github.com/kuack-io/e2e/commit/0eb05b9172e9bce7b746c55472d8d10134161a62))
+* exclude cleanup script from execution (should run once only) ([1e05fa3](https://github.com/kuack-io/e2e/commit/1e05fa35f71a26c19c8a7604b2975411b0141baa))
+
 ## [1.2.0](https://github.com/kuack-io/e2e/compare/1.1.1...1.2.0) (2026-01-04)
 
 ### Features
