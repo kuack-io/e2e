@@ -9,7 +9,7 @@ module.exports = {
       '@cucumber/pretty-formatter',
       'allure-cucumberjs/reporter',
       'html:allure-results/cucumber-report.html',
-      'json:allure-results/report.json',
+      'json:report.json',
     ],
     formatOptions: {
       colorsEnabled: true,
