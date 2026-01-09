@@ -80,4 +80,40 @@ export abstract class Helm extends Cmd {
       console.error(`[Helm] Delete error for ${releaseName}:`, error);
     }
   }
+  /**
+   * Cleanup all helm releases matching the test pattern.
+   * @param pattern - The pattern to match (default: starts with "kuack-" or "checker-").
+   */
+  public static async cleanup(pattern?: RegExp): Promise<void> {
+    const namespace = K8s.getNamespace();
+    // Default pattern matches kuack-node-*, kuack-agent-*, and checker-*
+    const regex = pattern || /^(kuack-|checker-)/;
+
+    console.log(`[Helm] Cleaning up releases matching ${regex} in namespace ${namespace}`);
+    try {
+      // List all releases
+      const args = ["helm", "list", "--short", "--namespace", namespace];
+      const result = await Cmd.run(args);
+
+      if (result.exitCode !== 0) {
+        console.warn(`[Helm] List failed: ${result.stderr}`);
+        return;
+      }
+
+      const releases = result.stdout.split("\n").filter((r) => r.trim().length > 0);
+      const toDelete = releases.filter((r) => regex.test(r));
+
+      if (toDelete.length === 0) {
+        console.log("[Helm] No releases to clean up");
+        return;
+      }
+
+      console.log(`[Helm] Found ${toDelete.length} releases to delete: ${toDelete.join(", ")}`);
+
+      // Delete in parallel
+      await Promise.allSettled(toDelete.map((release) => Helm.delete(release)));
+    } catch (error) {
+      console.error("[Helm] Cleanup failed:", error);
+    }
+  }
 }

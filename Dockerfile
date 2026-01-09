@@ -28,4 +28,4 @@ COPY cucumber.js ./
 COPY --from=builder /build/node_modules ./node_modules
 COPY --from=builder /build/dist ./dist
 
-CMD ["npm", "run", "test:parallel"]
+CMD ["/bin/sh", "-c", "npm run cleanup:cluster && npm run test:parallel"]

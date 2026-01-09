@@ -4,6 +4,7 @@ import { K8s } from "../../utils/k8s";
 import { PodFactory } from "../../utils/pod-factory";
 import { Tools } from "../../utils/tools";
 import { V1Pod } from "@kubernetes/client-node";
+import { expect } from "@playwright/test";
 
 // ============================================================================
 // HELPER FUNCTIONS (Shared logic, not directly used in Gherkin)
@@ -15,12 +16,34 @@ import { V1Pod } from "@kubernetes/client-node";
  */
 export async function deployCheckerPodForAgent(world: CustomWorld): Promise<void> {
   console.log("Deploying checker pod for agent");
-  const nodeName = world.getNode().getName(); // node name already includes random string
-  const podName = `checker-${nodeName}`;
+  const nodeName = world.getNode().getName();
+  const podName = `checker-${nodeName}-${Tools.randomString(4)}`;
   const pod = PodFactory.checkerForAgent(podName, nodeName);
   world.addPod(podName, pod);
   await K8s.applyPod(pod);
   console.log(`Checker pod ${podName} deployed successfully`);
+}
+
+/**
+ * Deploys multiple checker pods for agent testing.
+ * @param world - The test world instance.
+ * @param count - The number of pods to deploy.
+ */
+export async function deployManyCheckerPodsForAgent(world: CustomWorld, count: number): Promise<void> {
+  console.log(`Deploying ${count} checker pods for agent`);
+  const nodeName = world.getNode().getName();
+
+  const deploymentPromises: Promise<void>[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const podName = `checker-${nodeName}-${i}-${Tools.randomString(4)}`;
+    const pod = PodFactory.checkerForAgent(podName, nodeName);
+    world.addPod(podName, pod);
+    deploymentPromises.push(K8s.applyPod(pod).then(() => {}));
+  }
+
+  await Promise.all(deploymentPromises);
+  console.log(`${count} checker pods deployed successfully`);
 }
 
 /**
@@ -37,11 +60,32 @@ export async function deployCheckerPodForCluster(world: CustomWorld): Promise<vo
 }
 
 /**
+ * Deploys multiple checker pods for cluster testing.
+ * @param world - The test world instance.
+ * @param count - The number of pods to deploy.
+ */
+export async function deployManyCheckerPodsForCluster(world: CustomWorld, count: number): Promise<void> {
+  console.log(`Deploying ${count} checker pods for cluster`);
+
+  const deploymentPromises: Promise<void>[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const podName = `checker-cluster-${i}-${Tools.randomString(4)}`;
+    const pod = PodFactory.checkerForCluster(podName);
+    world.addPod(podName, pod);
+    deploymentPromises.push(K8s.applyPod(pod).then(() => {}));
+  }
+
+  await Promise.all(deploymentPromises);
+  console.log(`${count} checker pods for cluster deployed successfully`);
+}
+
+/**
  * Asserts that a pod finished successfully by checking its phase.
  * @param pod - The pod to check.
  * @throws Error if the pod did not finish successfully.
  */
-export async function assertPodFinishedSusscessfully(pod: V1Pod): Promise<void> {
+export async function assertPodFinishedSuccessfully(pod: V1Pod): Promise<void> {
   console.log("Asserting that pod finished successfully");
   const podName = pod.metadata?.name;
   if (!podName) {
@@ -95,13 +139,21 @@ export async function assertPodLogsContainMessage(pod: V1Pod, message: string): 
   if (!podName) {
     throw new Error("Pod must have a name");
   }
-  const logs = await K8s.getPodLogsByName(podName);
-
-  if (!logs.includes(message)) {
-    throw new Error(
-      `Pod ${podName} logs do not contain expected message "${message}". Logs: ${logs.substring(0, 500)}...`,
-    );
-  }
+  await expect
+    .poll(
+      async () => {
+        try {
+          return await K8s.getPodLogsByName(podName);
+        } catch {
+          return "";
+        }
+      },
+      {
+        timeout: 30000,
+        message: `Pod ${podName} logs did not contain expected message "${message}" within timeout.`,
+      },
+    )
+    .toContain(message);
   console.log(`Pod ${podName} logs contain message "${message}"`);
 }
 
@@ -163,4 +215,14 @@ export async function assertPodProcessedOnAgent(pod: V1Pod): Promise<void> {
     throw new Error(`Pod ${podName} was scheduled on cluster node "${nodeName}", not on kuack node`);
   }
   console.log(`Pod ${podName} was processed on agent (kuack node: ${nodeName})`);
+}
+
+/**
+ * Verifies that a pod completed successfully and produced the expected checker output.
+ * Encapsulates success phase check and log verification.
+ * @param pod - The pod to check.
+ */
+export async function verifyPodSuccess(pod: V1Pod): Promise<void> {
+  await assertPodFinishedSuccessfully(pod);
+  await assertPodLogsContainCheckerResult(pod);
 }

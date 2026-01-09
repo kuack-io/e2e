@@ -419,4 +419,34 @@ export abstract class K8s {
 
     return false;
   }
+  /**
+   * Clean up pods matching a pattern.
+   * @param pattern - Regex pattern for pod names.
+   */
+  public static async cleanupPods(pattern: RegExp = /^(checker-|kuack-)/): Promise<void> {
+    try {
+      const pods = await K8s.core.listNamespacedPod({
+        namespace: K8s.namespace,
+      });
+
+      const toDelete = pods.items.filter((pod) => {
+        const name = pod.metadata?.name;
+        // Delete if name matches pattern AND it's not the e2e-tests runner itself (if it happens to match)
+        return name && pattern.test(name) && name !== "e2e-tests" && pod.metadata?.labels?.["app"] !== "e2e-tests";
+      });
+
+      if (toDelete.length === 0) {
+        console.log("[Kubernetes] No pods to clean up");
+        return;
+      }
+
+      console.log(
+        `[Kubernetes] Found ${toDelete.length} pods to cleanup: ${toDelete.map((p) => p.metadata?.name).join(", ")}`,
+      );
+
+      await Promise.allSettled(toDelete.map((pod) => K8s.deletePod(pod)));
+    } catch (error) {
+      console.error("[Kubernetes] Pod cleanup failed:", error);
+    }
+  }
 }

@@ -26,6 +26,15 @@ export class Config {
    */
   static readonly externalNodeURL: string = process.env.NODE_URL ?? "";
 
+  /**
+   * External Node Name. When set, tests connect to this existing node
+   * instead of deploying a new one via Helm. Useful for testing against
+   * devspace deployments.
+   * We need this to schedule Pods on Kuack node via nodeSelector when testing
+   * against existing deployments (devspace case).
+   */
+  static readonly externalNodeName: string = process.env.NODE_NAME ?? "kuack-node";
+
   // Constants
   static readonly agentName: string = "kuack-agent";
   static readonly checkerUrl: string = "https://kuack.io";
