@@ -43,7 +43,7 @@
     "@typescript-eslint/parser": "^8.50.1",
     "allure": "^3.0.0",
     "eslint": "^9.39.2",
-    "eslint-plugin-jsdoc": "^61.5.0",
+    "eslint-plugin-jsdoc": "^62.0.0",
     "prettier": "^3.2.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
