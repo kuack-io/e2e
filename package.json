@@ -31,7 +31,7 @@
     "@cucumber/cucumber": "^12.5.0",
     "@kubernetes/client-node": "1.4.0",
     "@playwright/test": "^1.57.0",
-    "allure-cucumberjs": "^3.4.3"
+    "allure-cucumberjs": "^3.4.4"
   },
   "devDependencies": {
     "@allurereport/plugin-awesome": "^3.0.0",
