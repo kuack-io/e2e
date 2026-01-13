@@ -42,4 +42,15 @@ export abstract class PodFactory {
       .build();
     return pod;
   }
+
+  /**
+   * Creates an ephemeral pod with custom image and command.
+   * @param podName - The name of the pod.
+   * @param image - The image to use.
+   * @param command - The command to run.
+   * @returns The created pod builder (allows further customization like node selection).
+   */
+  public static ephemeral(podName: string, image: string, command: string[]): PodBuilder {
+    return new PodBuilder(podName).withImage(image).withCommand(command).withRestartPolicy("Never");
+  }
 }
