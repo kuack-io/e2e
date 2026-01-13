@@ -81,6 +81,52 @@ export async function deployManyCheckerPodsForCluster(world: CustomWorld, count:
 }
 
 /**
+ * Deploys a generic pod for agent testing.
+ * @param world - The test world instance.
+ * @param image - Image to deploy.
+ * @param command - Command to run.
+ */
+export async function deployGenericPodForAgent(world: CustomWorld, image: string, command: string[]): Promise<void> {
+  console.log(`Deploying generic pod ${image} for agent`);
+  const nodeName = world.getNode().getName();
+  const safeImageName = image.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  const podName = `agent-${safeImageName}-${Tools.randomString(4)}`;
+
+  const pod = PodFactory.ephemeral(podName, image, command)
+    .withNodeSelectors({
+      "kuack.io/node-type": "kuack-node",
+      "kubernetes.io/hostname": nodeName,
+    })
+    .withTolerations({
+      "kuack.io/provider": "kuack",
+      effect: "NoSchedule",
+    })
+    .build();
+
+  world.addPod(podName, pod);
+  await K8s.applyPod(pod);
+  console.log(`Generic pod ${podName} deployed on agent`);
+}
+
+/**
+ * Deploys a generic pod for cluster testing.
+ * @param world - The test world instance.
+ * @param image - Image to deploy.
+ * @param command - Command to run.
+ */
+export async function deployGenericPodForCluster(world: CustomWorld, image: string, command: string[]): Promise<void> {
+  console.log(`Deploying generic pod ${image} for cluster`);
+  const safeImageName = image.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  const podName = `cluster-${safeImageName}-${Tools.randomString(4)}`;
+
+  const pod = PodFactory.ephemeral(podName, image, command).build();
+
+  world.addPod(podName, pod);
+  await K8s.applyPod(pod);
+  console.log(`Generic pod ${podName} deployed on cluster`);
+}
+
+/**
  * Asserts that a pod finished successfully by checking its phase.
  * @param pod - The pod to check.
  * @throws Error if the pod did not finish successfully.
