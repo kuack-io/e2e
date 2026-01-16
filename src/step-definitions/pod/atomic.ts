@@ -23,7 +23,7 @@ When(
   async function (this: CustomWorld, image: string, commandStr: string, target: string) {
     let cmd: string[];
     if (image.includes("python")) {
-      cmd = ["python", "-c", commandStr];
+      cmd = ["python3", "-c", commandStr];
     } else if (image.includes("node")) {
       cmd = ["node", "-e", commandStr];
     } else {

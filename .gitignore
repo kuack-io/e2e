@@ -8,3 +8,4 @@ playwright-report/
 .DS_Store
 .vscode/
 .idea/
+report.json
