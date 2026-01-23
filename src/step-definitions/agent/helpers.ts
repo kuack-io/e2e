@@ -55,6 +55,13 @@ export async function disconnectAgent(world: CustomWorld, browserName: string = 
 
   console.log(`[${browserName}] Clicking disconnect button`);
   await agentPage.disconnect();
+
+  // Wait for the kuack-node to lose resources
+  // This ensures no pods can be scheduled on it
+  const nodeName = world.getNode().getName();
+  console.log(`[${browserName}] Waiting for node ${nodeName} to lose capacity`);
+  await K8s.waitForNodeCapacityRemoved(nodeName, 10000);
+  console.log(`[${browserName}] Node ${nodeName} lost capacity`);
 }
 
 /**
