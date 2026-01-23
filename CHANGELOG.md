@@ -1,3 +1,14 @@
+## [1.4.0](https://github.com/kuack-io/e2e/compare/1.3.0...1.4.0) (2026-01-23)
+
+### Features
+
+* tests for c2w images ([9acbf91](https://github.com/kuack-io/e2e/commit/9acbf911dc2a17b834503b9e491a5ddd31152ad3))
+
+### Bug Fixes
+
+* c2w tests ([f1a34ed](https://github.com/kuack-io/e2e/commit/f1a34ed9799a4982065b200c84b2416f1082a271))
+* linting ([557bdb0](https://github.com/kuack-io/e2e/commit/557bdb0242cbbd4d97168dc522aaddb253050c24))
+
 ## [1.3.0](https://github.com/kuack-io/e2e/compare/1.2.0...1.3.0) (2026-01-09)
 
 ### Features
