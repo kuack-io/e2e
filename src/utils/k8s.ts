@@ -455,6 +455,38 @@ export abstract class K8s {
 
     throw new Error(`Node ${nodeName} did not have allocatable resources within ${timeoutMs}ms`);
   }
+
+  /**
+   * Wait for a node to have NO allocatable resources (CPU = 0 or undefined).
+   * This is used to ensure an Agent has disconnected and the node is no longer schedulable.
+   * @param nodeName - Node name to wait for
+   * @param timeoutMs - Timeout in milliseconds (default: 30000)
+   */
+  public static async waitForNodeCapacityRemoved(nodeName: string, timeoutMs: number = 30000): Promise<void> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      const node = await K8s.getNode(nodeName);
+      const cpu = node.status?.allocatable?.["cpu"];
+
+      // If CPU is missing or zero, we consider capacity removed
+      if (!cpu) {
+        console.log(`[Kubernetes] Node ${nodeName} capacity removed (cpu not defined)`);
+        return;
+      }
+
+      const cpuValue = cpu.endsWith("m") ? parseInt(cpu.slice(0, -1), 10) : parseInt(cpu, 10) * 1000;
+      if (cpuValue <= 0) {
+        console.log(`[Kubernetes] Node ${nodeName} capacity removed (cpu: ${cpu})`);
+        return;
+      }
+
+      // Wait before checking again
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    throw new Error(`Node ${nodeName} still has allocatable resources within ${timeoutMs}ms`);
+  }
   /**
    * Clean up pods matching a pattern.
    * @param pattern - Regex pattern for pod names.
