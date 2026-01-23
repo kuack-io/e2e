@@ -23,6 +23,7 @@ RUN apt-get update && \
 
 COPY package.json ./
 COPY features/ ./features/
+COPY scripts/ ./scripts/
 COPY cucumber.js ./
 
 COPY --from=builder /build/node_modules ./node_modules
