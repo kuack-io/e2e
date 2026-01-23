@@ -1,3 +1,11 @@
+## [1.4.1](https://github.com/kuack-io/e2e/compare/1.4.0...1.4.1) (2026-01-23)
+
+### Bug Fixes
+
+* dockerfile ([31ec48c](https://github.com/kuack-io/e2e/commit/31ec48cfb34f6ae2cd53e31223941f8858560918))
+* dockerignore ([b80833b](https://github.com/kuack-io/e2e/commit/b80833b5e7ffbc5bcdfc2eedcab6acb4ffbcd811))
+* race condition ([eeefc88](https://github.com/kuack-io/e2e/commit/eeefc88a88871ca2e2d7fd1442a985a4695bad99))
+
 ## [1.4.0](https://github.com/kuack-io/e2e/compare/1.3.0...1.4.0) (2026-01-23)
 
 ### Features
