@@ -14,6 +14,20 @@ export abstract class Tools {
   }
 
   /**
+   * Extracts a short name from a container image URL.
+   * Example: "ghcr.io/kuack-io/c2w-examples/node:24-alpine" -> "node-24-alpine"
+   * @param image - The full container image URL.
+   * @returns A short, readable name suitable for pod naming.
+   */
+  public static shortImageName(image: string): string {
+    // Extract just the image name and tag, e.g., "node:24-alpine" from full path
+    const parts = image.split("/");
+    const lastPart = parts[parts.length - 1]; // e.g., "node:24-alpine"
+    // Replace ':' with '-' to get "node-24-alpine"
+    return lastPart.replace(":", "-");
+  }
+
+  /**
    * Sanitizes a string to be a valid K8s name.
    * K8s names must be lowercase alphanumeric with hyphens and <= 63 chars.
    * @param name - The string to sanitize.

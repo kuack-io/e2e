@@ -361,9 +361,15 @@ export abstract class K8s {
 
     while (Date.now() - startTime < timeoutMs) {
       const pod = await K8s.getPod(name);
+      const currentPhase = pod.status?.phase;
 
-      if (pod.status?.phase === phase) {
+      if (currentPhase === phase) {
         return pod;
+      }
+
+      // Fail fast: if we're waiting for Succeeded but pod is Failed (or Error), throw immediately
+      if (phase === "Succeeded" && (currentPhase === "Failed" || currentPhase === "Error")) {
+        throw new Error(`Pod ${name} failed with phase ${currentPhase} instead of ${phase}`);
       }
 
       // Wait a bit before checking again
@@ -418,6 +424,36 @@ export abstract class K8s {
     }
 
     return false;
+  }
+
+  /**
+   * Wait for a node to have allocatable resources (CPU > 0).
+   * This is used to ensure an Agent has connected and provided resources before deploying pods.
+   * @param nodeName - Node name to wait for
+   * @param timeoutMs - Timeout in milliseconds (default: 30000)
+   * @returns The node with resources
+   */
+  public static async waitForNodeResources(nodeName: string, timeoutMs: number = 30000): Promise<V1Node> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      const node = await K8s.getNode(nodeName);
+      const cpu = node.status?.allocatable?.["cpu"];
+
+      // CPU can be in milliCPU format (e.g., "1000m") or core format (e.g., "1")
+      if (cpu) {
+        const cpuValue = cpu.endsWith("m") ? parseInt(cpu.slice(0, -1), 10) : parseInt(cpu, 10) * 1000;
+        if (cpuValue > 0) {
+          console.log(`[Kubernetes] Node ${nodeName} has allocatable CPU: ${cpu}`);
+          return node;
+        }
+      }
+
+      // Wait before checking again
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    throw new Error(`Node ${nodeName} did not have allocatable resources within ${timeoutMs}ms`);
   }
   /**
    * Clean up pods matching a pattern.

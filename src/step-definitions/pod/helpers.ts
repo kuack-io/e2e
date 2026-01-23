@@ -1,6 +1,7 @@
 import { Config } from "../../components/config";
 import { CustomWorld } from "../../framework";
 import { K8s } from "../../utils/k8s";
+import { PodBuilder } from "../../utils/pod-builder";
 import { PodFactory } from "../../utils/pod-factory";
 import { Tools } from "../../utils/tools";
 import { V1Pod } from "@kubernetes/client-node";
@@ -57,6 +58,20 @@ export async function deployCheckerPodForCluster(world: CustomWorld): Promise<vo
   world.addPod(podName, pod);
   await K8s.applyPod(pod);
   console.log(`Checker pod ${podName} deployed successfully`);
+  console.log(`Checker pod ${podName} deployed successfully`);
+}
+
+/**
+ * Deploys a universal checker pod for fallback testing.
+ * @param world - The test world instance.
+ */
+export async function deployUniversalCheckerPod(world: CustomWorld): Promise<void> {
+  console.log("Deploying universal checker pod");
+  const podName = `checker-universal-${Tools.randomString(6)}`;
+  const pod = PodFactory.checkerUniversal(podName);
+  world.addPod(podName, pod);
+  await K8s.applyPod(pod);
+  console.log(`Universal checker pod ${podName} deployed successfully`);
 }
 
 /**
@@ -89,10 +104,17 @@ export async function deployManyCheckerPodsForCluster(world: CustomWorld, count:
 export async function deployGenericPodForAgent(world: CustomWorld, image: string, command: string[]): Promise<void> {
   console.log(`Deploying generic pod ${image} for agent`);
   const nodeName = world.getNode().getName();
-  const safeImageName = image.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-  const podName = `agent-${safeImageName}-${Tools.randomString(4)}`;
+  const shortName = Tools.sanitize(Tools.shortImageName(image));
+  const podName = `agent-${shortName}-${Tools.randomString(4)}`;
 
-  const pod = PodFactory.ephemeral(podName, image, command)
+  // Use PodBuilder directly to set args instead of command for Agent pods.
+  // Agent (WASM) images usually have a fixed entrypoint (the WASM module).
+  // We must pass arguments to it via 'args', not override it via 'command'.
+  const pod = new PodBuilder(podName)
+    .withImage(image)
+    .withArgs(command)
+    .withRestartPolicy("Never")
+    .withRequests("50m", "128Mi")
     .withNodeSelectors({
       "kuack.io/node-type": "kuack-node",
       "kubernetes.io/hostname": nodeName,
@@ -116,14 +138,39 @@ export async function deployGenericPodForAgent(world: CustomWorld, image: string
  */
 export async function deployGenericPodForCluster(world: CustomWorld, image: string, command: string[]): Promise<void> {
   console.log(`Deploying generic pod ${image} for cluster`);
-  const safeImageName = image.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-  const podName = `cluster-${safeImageName}-${Tools.randomString(4)}`;
+  const shortName = Tools.sanitize(Tools.shortImageName(image));
+  const podName = `cluster-${shortName}-${Tools.randomString(4)}`;
 
-  const pod = PodFactory.ephemeral(podName, image, command).build();
+  // For Linux clusters, override the entrypoint with "command".
+  const pod = new PodBuilder(podName).withImage(image).withCommand(command).withRestartPolicy("Never").build();
 
   world.addPod(podName, pod);
   await K8s.applyPod(pod);
   console.log(`Generic pod ${podName} deployed on cluster`);
+}
+
+/**
+ * Builds a command array to execute a multi-line script based on the image type.
+ * Detects the interpreter from the image name and wraps the script appropriately.
+ * Note: WASI has an iovec limit of ~1024 bytes for arguments. Keep scripts under ~900 bytes.
+ * @param image - The container image name.
+ * @param script - The multi-line script content.
+ * @returns Command array suitable for pod execution.
+ */
+export function buildScriptCommand(image: string, script: string): string[] {
+  const imageLower = image.toLowerCase();
+
+  // Detect interpreter based on image name
+  if (imageLower.includes("python")) {
+    // Python: use python3 -c with the script as argument
+    return ["python3", "-c", script.trim()];
+  } else if (imageLower.includes("node")) {
+    // Node.js: use node -e with the script as argument
+    return ["node", "-e", script.trim()];
+  } else {
+    // Default to shell (sh -c) for alpine, busybox, ubuntu, etc.
+    return ["sh", "-c", script.trim()];
+  }
 }
 
 /**
@@ -166,6 +213,14 @@ export async function assertPodFinishedSuccessfully(pod: V1Pod): Promise<void> {
     }
 
     const containerInfo = containerErrors.length > 0 ? `\nContainer status: ${containerErrors.join("; ")}` : "";
+
+    // Capture logs for debugging
+    try {
+      const logs = await K8s.getPodLogsByName(podName);
+      console.log(`\n=== POF FAILURE LOGS (${podName}) ===\n${logs}\n=====================================\n`);
+    } catch (logErr) {
+      console.log(`Failed to retrieve logs for failed pod ${podName}: ${logErr}`);
+    }
 
     throw new Error(
       `Pod ${podName} did not reach phase Succeeded within timeout. Current phase: ${phase}, Reason: ${reason}, Message: ${message}${containerInfo}`,
