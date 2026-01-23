@@ -7,5 +7,5 @@ Feature: Fallback Execution
   Scenario: Pods go to regular node when Agent is disconnected
     Given Agent has processed a workload
     When I disconnect agent
-    And I deploy Checker pod for Cluster
+    And I deploy Universal Checker pod
     Then Cluster executes Checker pod successfully

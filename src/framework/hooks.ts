@@ -15,7 +15,7 @@ import {
 } from "@cucumber/cucumber";
 import * as fs from "node:fs";
 
-// Timeout for test steps (2 minutes to account for helm install --wait)
+// Timeout for test steps (2 minutes to account for parallel WASM module downloads)
 const STEP_TIMEOUT_MS = 120_000;
 // Internal timeout fires slightly before Cucumber's to allow error capture
 const INIT_TIMEOUT_MS = STEP_TIMEOUT_MS - 2_000;

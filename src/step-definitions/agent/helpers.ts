@@ -1,6 +1,7 @@
 import { AgentPage } from "../../components/agentPage";
 import { CustomWorld } from "../../framework";
 import { Chromium } from "../../utils/browser";
+import { K8s } from "../../utils/k8s";
 
 // ============================================================================
 // HELPER FUNCTIONS (Shared logic, not directly used in Gherkin)
@@ -110,7 +111,8 @@ export async function assertAgentExecutedPods(
 
 /**
  * Ensures that an agent is open and connected to the node.
- * This encapsulates opening the UI, connecting, and asserting success.
+ * This encapsulates opening the UI, connecting, asserting success,
+ * and waiting for the node to have allocatable resources from the Agent.
  * @param world - The test world instance.
  * @param browserName - The name of the browser instance (default: "main").
  */
@@ -118,4 +120,11 @@ export async function ensureAgentConnected(world: CustomWorld, browserName: stri
   await openAgentUI(world, browserName);
   await connectAgentToNode(world, browserName);
   await assertAgentConnectionSuccess(world, browserName);
+
+  // Wait for the kuack-node to receive resources from the Agent
+  // This ensures pods can be scheduled before we try to deploy them
+  const nodeName = world.getNode().getName();
+  console.log(`[${browserName}] Waiting for node ${nodeName} to have allocatable resources from Agent`);
+  await K8s.waitForNodeResources(nodeName, 30000);
+  console.log(`[${browserName}] Node ${nodeName} is ready for pod scheduling`);
 }

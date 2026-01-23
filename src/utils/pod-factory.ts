@@ -19,6 +19,7 @@ export abstract class PodFactory {
    */
   public static checkerForAgent(podName: string, nodeName: string): V1Pod {
     const pod = this.checkerBase(podName)
+      .withRequests("10m", "16Mi") // Minimal resources for checker
       .withNodeSelectors({
         "kuack.io/node-type": "kuack-node",
         "kubernetes.io/hostname": nodeName,
@@ -39,6 +40,23 @@ export abstract class PodFactory {
   public static checkerForCluster(podName: string): V1Pod {
     const pod = this.checkerBase(podName)
       .withRestartPolicy("Never") // kubernetes tries to restart finished non-Job pods
+      .build();
+    return pod;
+  }
+
+  /**
+   * Creates a universal checker pod that can run on both Agent and Cluster.
+   * It tolerates the agent taint but doesn't force affinity.
+   * @param podName - The name of the pod.
+   * @returns The created pod.
+   */
+  public static checkerUniversal(podName: string): V1Pod {
+    const pod = this.checkerBase(podName)
+      .withRestartPolicy("Never")
+      .withTolerations({
+        "kuack.io/provider": "kuack",
+        effect: "NoSchedule",
+      })
       .build();
     return pod;
   }

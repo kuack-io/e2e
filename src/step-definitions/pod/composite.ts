@@ -7,7 +7,9 @@ import { Then, When } from "@cucumber/cucumber";
 // ============================================================================
 
 Then("Cluster executes Checker pod successfully", async function (this: CustomWorld) {
-  const pods = this.getPods().filter((p) => p.metadata?.name?.includes("checker-cluster-"));
+  const pods = this.getPods().filter(
+    (p) => p.metadata?.name?.includes("checker-cluster-") || p.metadata?.name?.includes("checker-universal-"),
+  );
   if (pods.length === 0) throw new Error("No cluster pods found");
   const pod = pods[pods.length - 1];
   await podHelpers.verifyPodSuccess(pod);

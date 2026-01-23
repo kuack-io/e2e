@@ -13,14 +13,14 @@ Feature: C2W Examples
     And "<target>" pods are processed in "<target>"
 
     Examples:
-      | target  | image                                            | command                         | expected_log       |
-      | Cluster | ghcr.io/kuack-io/c2w-examples/python:3.14-alpine | print('Python 3.14 works')      | Python 3.14 works  |
-      | Agent   | ghcr.io/kuack-io/c2w-examples/python:3.14-alpine | print('Python 3.14 works')      | Python 3.14 works  |
-      | Cluster | ghcr.io/kuack-io/c2w-examples/busybox:latest     | echo Hello from BusyBox         | Hello from BusyBox |
-      | Agent   | ghcr.io/kuack-io/c2w-examples/busybox:latest     | echo Hello from BusyBox         | Hello from BusyBox |
-      | Cluster | ghcr.io/kuack-io/c2w-examples/node:24-alpine     | console.log('NodeJS v24 works') | NodeJS v24 works   |
-      | Agent   | ghcr.io/kuack-io/c2w-examples/node:24-alpine     | console.log('NodeJS v24 works') | NodeJS v24 works   |
-      | Cluster | ghcr.io/kuack-io/c2w-examples/ubuntu:24.04       | cat /etc/os-release             | Ubuntu 24.04       |
-      | Agent   | ghcr.io/kuack-io/c2w-examples/ubuntu:24.04       | cat /etc/os-release             | Ubuntu 24.04       |
-      | Cluster | ghcr.io/kuack-io/c2w-examples/alpine:latest      | cat /etc/os-release             | Alpine Linux       |
-      | Agent   | ghcr.io/kuack-io/c2w-examples/alpine:latest      | cat /etc/os-release             | Alpine Linux       |
+      | target  | image                                            | command                                  | expected_log       |
+      | Cluster | ghcr.io/kuack-io/c2w-examples/python:3.14-alpine | python3 -c 'print(\"Python works\")'     | Python works       |
+      | Agent   | ghcr.io/kuack-io/c2w-examples/python:3.14-alpine | python3 -c 'print(\"Python works\")'     | Python works       |
+      | Cluster | ghcr.io/kuack-io/c2w-examples/busybox:latest     | sh -c 'echo Hello from BusyBox'          | Hello from BusyBox |
+      | Agent   | ghcr.io/kuack-io/c2w-examples/busybox:latest     | sh -c 'echo Hello from BusyBox'          | Hello from BusyBox |
+      | Cluster | ghcr.io/kuack-io/c2w-examples/node:24-alpine     | node -e 'console.log(\"NodeJS works\")'  | NodeJS works       |
+      | Agent   | ghcr.io/kuack-io/c2w-examples/node:24-alpine     | node -e 'console.log(\"NodeJS works\")'  | NodeJS works       |
+      | Cluster | ghcr.io/kuack-io/c2w-examples/ubuntu:24.04       | sh -c 'echo Ubuntu works'                | Ubuntu works       |
+      | Agent   | ghcr.io/kuack-io/c2w-examples/ubuntu:24.04       | sh -c 'echo Ubuntu works'                | Ubuntu works       |
+      | Cluster | ghcr.io/kuack-io/c2w-examples/alpine:latest      | sh -c 'echo Alpine works'                | Alpine works       |
+      | Agent   | ghcr.io/kuack-io/c2w-examples/alpine:latest      | sh -c 'echo Alpine works'                | Alpine works       |

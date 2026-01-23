@@ -43,7 +43,32 @@ export class Chromium implements BrowserInstance {
    * @param headless - Whether to run in headless mode (default: true).
    */
   public async open(url: string, headless: boolean = true): Promise<void> {
-    this.browser = await chromium.launch({ headless: headless });
+    this.browser = await chromium.launch({
+      headless: headless,
+      args: [
+        // Disable network throttling and improve download performance
+        "--disable-background-networking",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-ipc-flooding-protection",
+        "--disable-client-side-phishing-detection",
+        "--disable-default-apps",
+        "--disable-extensions",
+        "--disable-hang-monitor",
+        "--disable-popup-blocking",
+        "--disable-prompt-on-repost",
+        "--disable-sync",
+        "--disable-translate",
+        // Improve performance for WASM
+        "--disable-dev-shm-usage",
+        "--no-first-run",
+        "--no-sandbox",
+        "--ignore-certificate-errors",
+        // Enable WASM optimizations
+        "--enable-features=WebAssemblyBaseline,WebAssemblyLazyCompilation",
+      ],
+    });
     const videoDir = Chromium.getVideoDir();
     this.context = await this.browser.newContext({
       recordVideo: Config.recordVideo
@@ -54,7 +79,21 @@ export class Chromium implements BrowserInstance {
         : undefined,
     });
     this.page = await this.context.newPage();
-    await this.page.goto(url, { waitUntil: "networkidle" });
+    // Force document.hidden to be false to prevent the Agent from reporting itself as throttled
+    // This is necessary because in headless mode (even with throttling flags disabled),
+    // the browser might still report hidden=true, causing the Node provider to de-prioritize or skip scheduling.
+    await this.page.addInitScript(`
+      Object.defineProperty(document, "hidden", {
+        get: () => false,
+        configurable: true,
+      });
+      Object.defineProperty(document, "visibilityState", {
+        get: () => "visible",
+        configurable: true,
+      });
+      window.dispatchEvent(new Event("visibilitychange"));
+    `);
+    await this.page.goto(url, { waitUntil: "domcontentloaded" });
   }
 
   /**
@@ -104,14 +143,27 @@ export class Chromium implements BrowserInstance {
   /**
    * Close the browser and clean up resources.
    * Saves the video path before closing the context so videos can be accessed later.
+   * Uses timeouts to prevent indefinite hangs during cleanup.
    */
   public async close(): Promise<void> {
+    const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | undefined> => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<undefined>((resolve) => {
+        timeoutId = setTimeout(() => resolve(undefined), ms);
+      });
+      return Promise.race([promise, timeoutPromise]).finally(() => {
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+      });
+    };
+
     // Get video path before closing context (Playwright finalizes video on context close)
     if (this.page) {
       const video = this.page.video();
       if (video) {
         try {
-          this.videoPath = await video.path();
+          this.videoPath = await withTimeout(video.path(), 2000);
         } catch {
           // Video path may not be available yet, will try again later
         }
@@ -119,14 +171,14 @@ export class Chromium implements BrowserInstance {
     }
 
     if (this.context) {
-      await this.context.close();
+      await withTimeout(this.context.close(), 5000);
       // After closing context, the video path should be finalized
       // Try to get it again if we didn't get it before
       if (!this.videoPath && this.page) {
         const video = this.page.video();
         if (video) {
           try {
-            this.videoPath = await video.path();
+            this.videoPath = await withTimeout(video.path(), 2000);
           } catch {
             // Video may not be available
           }
@@ -135,7 +187,7 @@ export class Chromium implements BrowserInstance {
       this.context = undefined;
     }
     if (this.browser) {
-      await this.browser.close();
+      await withTimeout(this.browser.close(), 5000);
       this.browser = undefined;
     }
     this.page = undefined;
