@@ -11,7 +11,7 @@ RUN npm install -g typescript && \
     npm ci --omit=dev && \
     tsc
 
-FROM mcr.microsoft.com/playwright:v1.57.0-noble
+FROM mcr.microsoft.com/playwright:v1.58.2-noble
 
 WORKDIR /e2e
 
